@@ -19,7 +19,7 @@ const About = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="max-w-4xl mx-auto">
                     <header className="text-center mb-16">
-                        <h1 className="text-4xl md:text-5xl font-extrabold text-brand-dark">Our Mission: Simplifying Financial Data</h1>
+                        <h1 className="text-4xl md:text-5xl font-bold text-brand-dark">Our Mission: Simplifying Financial Data</h1>
                         <p className="mt-4 text-lg text-brand-gray">We believe that everyone should have easy access to their financial data, free from the tedious task of manual entry.</p>
                     </header>
 
@@ -34,7 +34,12 @@ const About = () => {
                             </p>
                         </div>
                          <div className="bg-gray-100 rounded-lg p-8 h-full flex items-center justify-center">
-                            <img src="/logo.png" alt="BankConverts Logo" className="h-24 w-auto" />
+                            <div className="text-center">
+                                <span className="font-bold text-4xl leading-none">
+                                    <span className="text-brand-blue">Bank</span><span className="text-brand-green">Converts</span>
+                                </span>
+                                <p className="text-sm text-brand-gray mt-2">Transform Statements. Unlock Data.</p>
+                            </div>
                         </div>
                     </div>
 

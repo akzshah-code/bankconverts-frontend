@@ -113,7 +113,6 @@ const Pricing = ({ user, onPaymentSuccess }: PricingProps) => {
             currency: 'INR',
             name: 'BankConverts',
             description: `Subscription - ${plan.name} (${billingCycle})`,
-            image: '/logo.png',
             handler: (response: any) => {
                 console.log('Payment success response:', response);
                 onPaymentSuccess(plan.name, billingCycle);

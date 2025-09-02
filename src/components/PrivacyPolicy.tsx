@@ -19,7 +19,7 @@ const PrivacyPolicy = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <header className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-brand-dark">Privacy Policy</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-brand-dark">Privacy Policy</h1>
             <p className="mt-4 text-lg text-brand-gray">Last Updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </header>
 

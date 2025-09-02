@@ -26,7 +26,7 @@ const Contact = () => {
     <section className="py-20 bg-gray-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-brand-dark">Get in Touch</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-brand-dark">Get in Touch</h1>
           <p className="mt-4 text-lg text-brand-gray">
             We'd love to hear from you. Fill out the form below or email us directly.
           </p>

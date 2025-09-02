@@ -43,8 +43,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <a href="/#" className="flex items-center">
-              <img src="/logo.png" alt="BankConverts Logo" className="h-8 w-auto" />
-              <div className="ml-3 flex flex-col justify-center">
+              <div className="flex flex-col justify-center">
                  <span className="font-bold text-xl leading-none">
                     <span className="text-brand-blue">Bank</span><span className="text-brand-green">Converts</span>
                  </span>
@@ -75,7 +74,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
                   Logout
                 </button>
               ) : (
-                <a href="#register" className="bg-brand-blue text-white px-4 py-2 rounded-md font-semibold hover:bg-opacity-90 transition-colors duration-200">
+                <a href="#register" className="bg-brand-primary text-white px-4 py-2 rounded-md font-semibold hover:bg-brand-primary-hover transition-colors duration-200">
                   Register
                 </a>
               )}
