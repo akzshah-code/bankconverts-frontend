@@ -1,5 +1,6 @@
 
 
+
 import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { User, BlogPost, EmailTemplate, EmailRoute, ConversionResult } from './lib/types';
 import { users as initialUsers, blogPosts as initialBlogPosts, emailTemplates as initialEmailTemplates, emailRoutes as initialEmailRoutes } from './lib/mock-data';
@@ -30,6 +31,8 @@ const LoadingFallback = () => (
     </div>
   </div>
 );
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 function App() {
   const [route, setRoute] = useState(window.location.hash);
@@ -140,7 +143,7 @@ function App() {
     };
 
     // Asynchronously send a welcome email without blocking the registration flow.
-    fetch('/api/send-welcome-email', {
+    fetch(`${API_BASE_URL}/send-welcome-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newUser.name, email: newUser.email }),
@@ -180,7 +183,7 @@ function App() {
     };
 
     // Asynchronously send a plan upgrade email.
-    fetch('/api/send-upgrade-email', {
+    fetch(`${API_BASE_URL}/send-upgrade-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: updatedUser.name, email: updatedUser.email, planName: updatedUser.plan }),

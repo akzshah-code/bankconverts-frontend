@@ -42,6 +42,9 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Add this line to ignore the functions directory
+functions/
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 

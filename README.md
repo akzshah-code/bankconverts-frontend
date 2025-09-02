@@ -1,20 +1,17 @@
-# BankConverts
+# BankConverts: A Split Frontend/Backend Application
 
-A powerful and easy-to-use tool to convert bank statements from PDF or images into Excel or CSV files in seconds. This project uses a React frontend and a Cloudflare serverless function backend powered by the Google Gemini API.
+This project converts bank statements into structured data using a public React frontend and a private backend powered by Cloudflare Workers and the Google Gemini API. This two-repository setup ensures that proprietary backend logic remains secure.
 
-## Prerequisites
+## Architecture Overview
 
-- [Node.js](https://nodejs.org/en) (v22.x or later recommended)
-- [npm](https://www.npmjs.com/) (comes with Node.js)
-- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) (for deployment)
+1.  **`bankconverts-frontend` (This Repository - Public):** A Vite-powered React application that provides the user interface. It is deployed as a **Cloudflare Pages** project.
+2.  **`bankconverts-backend` (Separate Private Repository):** A Cloudflare Worker that handles all secure logic, including file processing and communication with the Gemini API. It is deployed as a **Cloudflare Worker**.
 
-## Getting Started
+---
 
-Follow these steps to get your development environment set up and running.
+## Frontend Setup (`bankconverts-frontend`)
 
 ### 1. Install Dependencies
-
-This command will install all necessary libraries into a `node_modules` folder.
 
 ```bash
 npm install
@@ -22,57 +19,92 @@ npm install
 
 ### 2. Set Up Local Environment Variables
 
-The application requires API keys to function.
+The frontend needs to know the URL of your local backend server and your Razorpay key.
 
-a. In your project's root directory, create a new file named `.dev.vars`.
+a. In the root of *this* project, create a new file named `.dev.vars`.
 
-b. Add your Google Gemini API key and your Razorpay Key ID in the following format.
+b. Add the following variables.
 
 ```
-# .dev.vars - Do NOT include quotes
+# .dev.vars (in frontend project)
 
-API_KEY=PASTE_YOUR_GOOGLE_GEMINI_API_KEY_HERE
+# The local URL of your backend worker (started with `npm run dev` in the backend project)
+VITE_API_BASE_URL=http://127.0.0.1:8787
+
+# Your public Razorpay Key ID
 VITE_RAZORPAY_KEY_ID=PASTE_YOUR_RAZORPAY_KEY_ID_HERE
 ```
-> **Note:** This file is included in `.gitignore` and should never be committed. The `VITE_` prefix is required by Vite to expose the Razorpay key to the frontend during development.
+> **Note:** The `VITE_` prefix is required by Vite to expose these variables to your application code.
 
 ### 3. Run the Development Server
 
-This command starts both the frontend Vite server and the backend serverless function proxy.
+This command starts the Vite development server for the frontend application.
 
 ```bash
 npm run dev
 ```
 
-Your application should now be running at `http://localhost:8788`.
+Your frontend should now be running at `http://localhost:5174`.
 
-## Deployment to Cloudflare Pages
+### 4. Deployment to Cloudflare Pages
 
-This project is configured for easy deployment to Cloudflare Pages.
+a. In the Cloudflare dashboard, create a new **Pages** project and connect it to this GitHub repository.
 
-### 1. Connect Your Repository
+b. **Configure Build Settings:**
+   - **Framework preset:** `Vite`
+   - **Build command:** `npm run build`
+   - **Build output directory:** `dist`
 
-In the Cloudflare dashboard, create a new Pages project and connect it to your GitHub repository.
+c. **Set Production Environment Variables:**
+   - `VITE_API_BASE_URL`: The **production URL** of your deployed Cloudflare Worker (e.g., `https://bankconverts-api.your-username.workers.dev`).
+   - `VITE_RAZORPAY_KEY_ID`: Your production Razorpay Key ID.
 
-### 2. Configure Build Settings
+---
 
-Use the following build settings:
-- **Framework preset:** `Vite`
-- **Build command:** `npm run build`
-- **Build output directory:** `dist`
+## Backend Setup (`bankconverts-backend`)
 
-### 3. Set Production Environment Variables (CRITICAL)
+Follow these instructions in your separate, **private** `bankconverts-backend` repository.
 
-This is the most important step for a successful deployment. In your Pages project settings (**Settings > Environment variables**), you must add your keys. Cloudflare has two types of variables, and they must be used correctly.
+### 1. Install Dependencies
 
-- **`VITE_RAZORPAY_KEY_ID`**:
-  - **Type**: `Plaintext`
-  - **Why**: This key is needed by the Vite build process to be included in the frontend code. Plaintext variables are available at **build time**.
+```bash
+npm install
+```
 
-- **`API_KEY`**:
-  - **Type**: `Secret text`
-  - **Why**: The Google Gemini API key is used by your live serverless function. It must be kept secure and is only needed at **runtime**. `Secret text` variables are encrypted and only made available to the running function, not the build process.
+### 2. Set Up Local Environment Variables
 
-**If you set `API_KEY` as `Plaintext`, your live application will fail.**
+The backend worker needs your secure Google Gemini API key.
 
-After setting the variables, re-deploy your project to apply the changes.
+a. In the root of the *backend* project, create a file named `.dev.vars`.
+
+b. Add your secret key.
+
+```
+# .dev.vars (in backend project)
+
+API_KEY=PASTE_YOUR_GOOGLE_GEMINI_API_KEY_HERE
+```
+
+### 3. Run the Development Server
+
+This command starts the local Wrangler server for your backend API.
+
+```bash
+npm run dev
+```
+
+Your backend API should now be running at `http://127.0.0.1:8787`.
+
+### 4. Deployment to Cloudflare Workers
+
+a. **First-time deployment:**
+   ```bash
+   npm run deploy
+   ```
+   This will publish your worker and create a public URL.
+
+b. **Set Production Secret:** Your `API_KEY` must be set as a secret in the Cloudflare dashboard, not as a plaintext environment variable.
+   ```bash
+   npx wrangler secret put API_KEY
+   ```
+   You will be prompted to paste your secret key. This ensures it is encrypted and securely available to your live worker.
