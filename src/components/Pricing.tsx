@@ -130,7 +130,7 @@ const Pricing = ({ user, onPaymentSuccess }: PricingProps) => {
                     alert('Payment was cancelled.');
                 }
             },
-            'callback_url': `https://www.bankconverts.com/#dashboard?payment_id=`,
+            'callback_url': `https://bankconverts.com/#dashboard?payment_id=`,
             'redirect': true
         };
         

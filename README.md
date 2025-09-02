@@ -11,6 +11,10 @@ This project converts bank statements into structured data using a public React 
 
 ## Frontend Setup (`bankconverts-frontend`)
 
+### Important: Project Cleanup
+
+Your project contains an unused `/functions` directory. This was likely from an earlier project structure. To prevent build errors and keep your project aligned with the two-repository architecture, it is highly recommended that you **delete the entire `functions` directory** from your `bankconverts-frontend` project before deploying to Cloudflare Pages.
+
 ### 1. Install Dependencies
 
 ```bash
