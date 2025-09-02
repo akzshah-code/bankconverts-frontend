@@ -56,7 +56,7 @@ b. **Configure Build Settings:**
    - **Build output directory:** `dist`
 
 c. **Set Production Environment Variables:**
-   - `VITE_API_BASE_URL`: The **production URL** of your deployed Cloudflare Worker (e.g., `https://bankconverts-api.your-username.workers.dev`).
+   - `VITE_API_BASE_URL`: `https://bankconverts-backend.iamshahkarimabdul.workers.dev`
    - `VITE_RAZORPAY_KEY_ID`: Your production Razorpay Key ID.
 
 ---

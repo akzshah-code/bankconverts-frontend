@@ -1,9 +1,9 @@
 
-
 import { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { ExtractedTransaction, ConversionResult } from '../lib/types';
 import ResultsView from './ResultsView';
 import UnlockPdf from './UnlockPdf';
+import { extractTransactionsFromApi } from '../services/apiService';
 
 interface ConverterProps {
   onConversionComplete: (result: ConversionResult) => void;
@@ -113,34 +113,8 @@ const Converter = ({ onConversionComplete }: ConverterProps) => {
     setResult(null);
 
     try {
-        const formData = new FormData();
-        formData.append('file', file);
-        if (password) {
-            formData.append('password', password);
-        }
-
-        const response = await fetch('/api/convert', {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            let errorText = `Request failed with status ${response.status}`;
-            const responseBody = await response.text();
-            try {
-                // Try to parse a JSON error response from the server
-                const errorData = JSON.parse(responseBody);
-                errorText = errorData.error || errorText;
-            } catch {
-                // If the response is not JSON, use the raw text
-                errorText = responseBody || errorText;
-            }
-            throw new Error(errorText);
-        }
-        
-        const responseData = await response.json();
+        const responseData = await extractTransactionsFromApi(file, password);
         setResult(responseData);
-
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(errorMessage);
