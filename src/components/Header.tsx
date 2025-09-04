@@ -43,20 +43,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <a href="/#" className="flex items-center space-x-2">
-              {/* Custom SVG Logo */}
-              <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 0C5.37258 0 0 5.37258 0 12V52C0 58.6274 5.37258 64 12 64H52C58.6274 64 64 58.6274 64 52V20L44 0H12Z" fill="#2563EB"/>
-                  <path d="M64 20H44V0L64 20Z" fill="#60A5FA"/>
-                  <g>
-                      <rect x="8" y="38" width="22" height="20" rx="2" fill="#EFEFEF"/>
-                      <path d="M19 41C15.134 41 12 44.134 12 48C12 51.866 15.134 55 19 55C22.866 55 26 51.866 26 48C26 44.134 22.866 41 19 41ZM19 52C16.7909 52 15 50.2091 15 48C15 45.7909 16.7909 44 19 44C21.1929 44 23 45.7909 23 48C23 50.2091 21.1929 52 19 52Z" fill="#DC2626"/>
-                  </g>
-                  <g>
-                      <rect x="34" y="38" width="22" height="20" rx="2" fill="#10B981"/>
-                      <path d="M40 44L50 52M50 44L40 52" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                  </g>
-                  <path d="M38.8 13.2H24.4V16H27.5C31.5 16 31.5 20.4 27.5 20.4H24.4V23.2H27.9C31.9 23.2 31.9 27.6 27.9 27.6H25.2V30.4H21.2V9.6H38.8V13.2Z" fill="white"/>
-              </svg>
+              <img src="/Logo.png" alt="BankConverts Logo" className="h-10 w-auto" />
               <div className="flex flex-col justify-center">
                  <span className="font-bold text-xl leading-none">
                     <span className="text-brand-blue">Bank</span><span className="text-brand-green">Converts</span>

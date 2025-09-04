@@ -1,14 +1,17 @@
 
-import { useState, useRef, ChangeEvent, DragEvent } from 'react';
+
+import { useState, useRef, ChangeEvent, DragEvent, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import ExcelJS from 'exceljs';
 import { AuthUser, FileState, ConversionResult } from '../lib/types';
-import { getPlanDetails } from '../lib/plans';
 import { extractTransactionsFromApi } from '../services/apiService';
 import { FileUploadIcon, CloudUploadIcon, LockIcon, XIcon, CogsIcon } from './Icon.tsx';
 import { PasswordModal } from './PasswordModal.tsx';
 import { AnalysisView } from './AnalysisView.tsx';
 import CliCommandView from './CliCommandView.tsx';
+import { checkUsageLimit } from '../lib/usage';
+import LimitReachedView from './LimitReachedView.tsx';
+
 
 const generateId = () => `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -32,10 +35,20 @@ export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | nu
     const [globalError, setGlobalError] = useState<string | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [limitMessage, setLimitMessage] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const [cliVisibility, setCliVisibility] = useState<{ [key: string]: boolean }>({});
     const [copiedCommandId, setCopiedCommandId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const { limitReached, message } = checkUsageLimit(user);
+        if (limitReached) {
+            setLimitMessage(message);
+        } else {
+            setLimitMessage(null);
+        }
+    }, [user]);
 
     const toggleCliVisibility = (id: string) => {
         setCliVisibility(prev => ({ ...prev, [id]: !prev[id] }));
@@ -65,6 +78,7 @@ export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | nu
     };
 
     const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+        if (limitMessage) return;
         const selectedFiles = e.target.files;
         if (!selectedFiles) return;
 
@@ -124,6 +138,7 @@ export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | nu
     // FIX: Replaced `React.DragEvent` with `DragEvent` after adding it to the component import.
     const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault(); e.stopPropagation(); setIsDragOver(false);
+        if (limitMessage) return;
         if (e.dataTransfer.files?.[0]) {
             const syntheticEvent = { target: { files: e.dataTransfer.files } } as unknown as ChangeEvent<HTMLInputElement>;
             await handleFileChange(syntheticEvent);
@@ -133,6 +148,7 @@ export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | nu
     // FIX: Replaced `React.DragEvent` with `DragEvent` after adding it to the component import.
     const handleDragEvents = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault(); e.stopPropagation();
+        if (limitMessage) return;
         if (e.type === 'dragenter' || e.type === 'dragover') setIsDragOver(true);
         else if (e.type === 'dragleave') setIsDragOver(false);
     };
@@ -167,29 +183,15 @@ export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | nu
     };
     
     const handleConvertAll = async () => {
-        if (files.some(f => f.status === 'locked')) {
-            setIsPasswordModalOpen(true);
+        const { limitReached, message } = checkUsageLimit(user);
+        if (limitReached) {
+            setLimitMessage(message);
             return;
         }
 
-        if (user) {
-            if (user.plan === 'Free') {
-                const now = Date.now();
-                const dailyUsage = user.dailyUsage || { pagesUsed: 0, resetTimestamp: 0 };
-                const currentUsage = now > dailyUsage.resetTimestamp ? 0 : dailyUsage.pagesUsed;
-
-                if (currentUsage >= 5) {
-                    const resetTime = new Date(dailyUsage.resetTimestamp).toLocaleString();
-                    setGlobalError(`You have reached your daily limit of 5 pages. Your limit resets on ${resetTime}.`);
-                    return;
-                }
-            } else {
-                const planDetails = getPlanDetails(user.plan);
-                if (user.usage.used >= planDetails.pages) {
-                    setGlobalError(`You have used all ${planDetails.pages} pages for your current billing cycle. Please upgrade your plan.`);
-                    return;
-                }
-            }
+        if (files.some(f => f.status === 'locked')) {
+            setIsPasswordModalOpen(true);
+            return;
         }
         
         const startTime = Date.now();
@@ -298,95 +300,101 @@ export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | nu
                 className={`bg-white rounded-lg shadow-2xl p-8 w-full transition-all duration-300 ${isDragOver ? 'border-2 border-dashed border-brand-blue bg-brand-blue-light' : 'border-2 border-transparent'}`}
                 onDragEnter={handleDragEvents} onDragOver={handleDragEvents} onDragLeave={handleDragEvents} onDrop={handleDrop}
             >
-                {batchResult && (
-                    <AnalysisView batchResult={batchResult} onDownload={handleDownloadCombined} />
-                )}
+                {limitMessage ? (
+                    <LimitReachedView message={limitMessage} user={user} />
+                ) : (
+                    <>
+                        {batchResult && (
+                            <AnalysisView batchResult={batchResult} onDownload={handleDownloadCombined} />
+                        )}
 
-                {!hasQueue && !batchResult && (
-                    <div className="text-center flex flex-col items-center justify-center space-y-4 h-64 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                        <div className="bg-brand-blue-light rounded-full p-4">
-                            <FileUploadIcon/>
-                        </div>
-                        <h2 className="text-2xl font-bold text-brand-dark">Upload Bank Statements</h2>
-                        <p className="text-brand-gray">Drag & drop or click to select files for bulk conversion.</p>
-                        <button className="bg-brand-blue text-white px-4 py-2 rounded-md font-semibold hover:bg-brand-blue-hover transition-colors duration-200 flex items-center">
-                            <CloudUploadIcon/> Choose Files
-                        </button>
-                    </div>
-                )}
-                
-                {hasQueue && (
-                    <div className="w-full">
-                        <div className="space-y-3 max-h-96 overflow-y-auto p-2 border-t border-b my-4">
-                            {files.map(f => (
-                                <div key={f.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md border">
-                                    <div className="flex-grow truncate mr-4">
-                                        <div className="font-medium text-brand-dark flex items-center truncate">
-                                            {f.status === 'locked' ? <LockIcon className="text-yellow-500 mr-2 flex-shrink-0"/> : <span className="mr-2 flex-shrink-0">📄</span>} 
-                                            <span className="truncate" title={f.file.name}>{f.file.name}</span>
-                                        </div>
-                                        {f.status === 'processing' && <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-brand-blue h-1.5 rounded-full" style={{ width: `100%` }}></div></div>}
-                                        {f.error && (
-                                            <div className="text-red-600 text-xs mt-1">
-                                                <span>{f.error}</span>
-                                                {f.error.includes('Unsupported encryption') &&
-                                                    <div>
-                                                        <button className="text-blue-600 hover:underline text-xs" onClick={() => toggleCliVisibility(f.id)}>
-                                                            {cliVisibility[f.id] ? 'Hide' : 'Show'} CLI Alternative
-                                                        </button>
-                                                        <CliCommandView 
-                                                            file={f}
-                                                            isVisible={cliVisibility[f.id]}
-                                                            onCopy={handleCopyCommand}
-                                                            copiedCommandId={copiedCommandId}
-                                                        />
-                                                    </div>
-                                                }
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center space-x-3">
-                                        <StatusBadge status={f.status} />
-                                        <button onClick={() => handleRemoveFile(f.id)} className="text-gray-400 hover:text-red-500" title="Remove file" disabled={isProcessingBatch}><XIcon /></button>
-                                    </div>
+                        {!hasQueue && !batchResult && (
+                            <div className="text-center flex flex-col items-center justify-center space-y-4 h-64 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                                <div className="bg-brand-blue-light rounded-full p-4">
+                                    <FileUploadIcon/>
                                 </div>
-                            ))}
-                        </div>
+                                <h2 className="text-2xl font-bold text-brand-dark">Upload Bank Statements</h2>
+                                <p className="text-brand-gray">Drag & drop or click to select files for bulk conversion.</p>
+                                <button className="bg-brand-blue text-white px-4 py-2 rounded-md font-semibold hover:bg-brand-blue-hover transition-colors duration-200 flex items-center">
+                                    <CloudUploadIcon/> Choose Files
+                                </button>
+                            </div>
+                        )}
                         
-                        {hasLockedFiles && !isProcessingBatch && (
-                            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded-md text-sm mt-4">
-                                You have {lockedFiles.length} locked file(s). <button className="font-semibold underline" onClick={() => setIsPasswordModalOpen(true)}>Unlock them</button> to continue.
+                        {hasQueue && (
+                            <div className="w-full">
+                                <div className="space-y-3 max-h-96 overflow-y-auto p-2 border-t border-b my-4">
+                                    {files.map(f => (
+                                        <div key={f.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md border">
+                                            <div className="flex-grow truncate mr-4">
+                                                <div className="font-medium text-brand-dark flex items-center truncate">
+                                                    {f.status === 'locked' ? <LockIcon className="text-yellow-500 mr-2 flex-shrink-0"/> : <span className="mr-2 flex-shrink-0">📄</span>} 
+                                                    <span className="truncate" title={f.file.name}>{f.file.name}</span>
+                                                </div>
+                                                {f.status === 'processing' && <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-brand-blue h-1.5 rounded-full" style={{ width: `100%` }}></div></div>}
+                                                {f.error && (
+                                                    <div className="text-red-600 text-xs mt-1">
+                                                        <span>{f.error}</span>
+                                                        {f.error.includes('Unsupported encryption') &&
+                                                            <div>
+                                                                <button className="text-blue-600 hover:underline text-xs" onClick={() => toggleCliVisibility(f.id)}>
+                                                                    {cliVisibility[f.id] ? 'Hide' : 'Show'} CLI Alternative
+                                                                </button>
+                                                                <CliCommandView 
+                                                                    file={f}
+                                                                    isVisible={cliVisibility[f.id]}
+                                                                    onCopy={handleCopyCommand}
+                                                                    copiedCommandId={copiedCommandId}
+                                                                />
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center space-x-3">
+                                                <StatusBadge status={f.status} />
+                                                <button onClick={() => handleRemoveFile(f.id)} className="text-gray-400 hover:text-red-500" title="Remove file" disabled={isProcessingBatch}><XIcon /></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                {hasLockedFiles && !isProcessingBatch && (
+                                    <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded-md text-sm mt-4">
+                                        You have {lockedFiles.length} locked file(s). <button className="font-semibold underline" onClick={() => setIsPasswordModalOpen(true)}>Unlock them</button> to continue.
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between items-center mt-6 pt-4 border-t">
+                                     {batchResult ? (
+                                        <button className="w-full bg-brand-primary text-white px-4 py-3 rounded-md font-semibold hover:bg-brand-primary-hover transition-colors duration-200" onClick={resetState}>
+                                            Start New Batch
+                                        </button>
+                                     ) : (
+                                        <>
+                                            <button className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md font-semibold hover:bg-gray-300 transition-colors duration-200 disabled:opacity-50" onClick={() => fileInputRef.current?.click()} disabled={isProcessingBatch}>
+                                                Add More Files
+                                            </button>
+                                            <button className="bg-brand-blue text-white px-6 py-3 rounded-md font-semibold hover:bg-brand-blue-hover transition-colors duration-200 disabled:bg-brand-blue/60 disabled:cursor-not-allowed flex items-center justify-center min-w-[200px]" onClick={handleConvertAll} disabled={!canConvert && !hasLockedFiles}>
+                                                {isProcessingBatch ? (
+                                                    <>
+                                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                                        {`Processing ${processingFileIndex} of ${queuedFilesCount}...`}
+                                                    </>
+                                                ) : (
+                                                    hasLockedFiles ? <><LockIcon /> Unlock Files ({lockedFiles.length})</> : <><CogsIcon /> Convert All ({queuedFilesCount})</>
+                                                )}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         )}
 
-                        <div className="flex justify-between items-center mt-6 pt-4 border-t">
-                             {batchResult ? (
-                                <button className="w-full bg-brand-primary text-white px-4 py-3 rounded-md font-semibold hover:bg-brand-primary-hover transition-colors duration-200" onClick={resetState}>
-                                    Start New Batch
-                                </button>
-                             ) : (
-                                <>
-                                    <button className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md font-semibold hover:bg-gray-300 transition-colors duration-200 disabled:opacity-50" onClick={() => fileInputRef.current?.click()} disabled={isProcessingBatch}>
-                                        Add More Files
-                                    </button>
-                                    <button className="bg-brand-blue text-white px-6 py-3 rounded-md font-semibold hover:bg-brand-blue-hover transition-colors duration-200 disabled:bg-brand-blue/60 disabled:cursor-not-allowed flex items-center justify-center min-w-[200px]" onClick={handleConvertAll} disabled={!canConvert && !hasLockedFiles}>
-                                        {isProcessingBatch ? (
-                                            <>
-                                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="http://www.w3.org/2000/svg"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                                {`Processing ${processingFileIndex} of ${queuedFilesCount}...`}
-                                            </>
-                                        ) : (
-                                            hasLockedFiles ? <><LockIcon /> Unlock Files ({lockedFiles.length})</> : <><CogsIcon /> Convert All ({queuedFilesCount})</>
-                                        )}
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
+                        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png,.csv,.txt" hidden multiple disabled={isProcessingBatch || !!limitMessage} />
+                    </>
                 )}
-
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".pdf,.jpg,.jpeg,.png,.csv,.txt" hidden multiple disabled={isProcessingBatch} />
-                {globalError && <div className="bg-red-100 text-red-700 p-3 rounded-md mt-4 text-sm">{globalError}</div>}
+                {globalError && !limitMessage && <div className="bg-red-100 text-red-700 p-3 rounded-md mt-4 text-sm">{globalError}</div>}
             </div>
         </section>
     );

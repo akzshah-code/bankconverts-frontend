@@ -7,6 +7,7 @@ import UsageTiers from '../components/UsageTiers';
 import CallToAction from '../components/CallToAction';
 import Footer from '../components/Footer';
 import { User, ConversionResult } from '../lib/types';
+import { updateAnonymousUsage } from '../lib/usage';
 
 interface LandingPageProps {
   user: User | null;
@@ -15,11 +16,19 @@ interface LandingPageProps {
 }
 
 const LandingPage = ({ user, onLogout, onConversionComplete }: LandingPageProps) => {
+  const handleLandingConversion = (result: ConversionResult) => {
+    if (!user) {
+      updateAnonymousUsage(result.pages);
+    }
+    // This will update state for logged-in users via App.tsx
+    onConversionComplete(result);
+  };
+  
   return (
     <div className="flex flex-col min-h-screen">
       <Header user={user} onLogout={onLogout} />
       <main className="flex-grow">
-        <Hero onConversionComplete={onConversionComplete} />
+        <Hero onConversionComplete={handleLandingConversion} user={user} />
         <Features />
         <BankSupport />
         <UsageTiers />

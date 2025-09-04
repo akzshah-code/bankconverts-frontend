@@ -10,15 +10,13 @@ interface ResultsViewProps {
 }
 
 const ResultsView = ({ transactions, onReset, onConversionComplete }: ResultsViewProps) => {
+  const pagesUsed = Math.ceil(transactions.length / 25) || 1;
 
   // When the component mounts with results, report the page usage.
-  // Using an empty dependency array `[]` ensures this effect runs only once
-  // after the initial render with the transactions, preventing duplicate calls.
   useEffect(() => {
-    const pages = Math.ceil(transactions.length / 25) || 1;
     const result: ConversionResult = {
       transactions: transactions.length,
-      pages: pages,
+      pages: pagesUsed,
       fileCount: 1,
       successfulFiles: 1,
       processingTime: 0, // Not tracked for single conversions, but required by type.
@@ -26,6 +24,21 @@ const ResultsView = ({ transactions, onReset, onConversionComplete }: ResultsVie
     onConversionComplete(result);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const debits = transactions.filter(t => t.debit != null && t.debit > 0);
+  const credits = transactions.filter(t => t.credit != null && t.credit > 0);
+
+  const totalDebits = debits.reduce((sum, t) => sum + (t.debit || 0), 0);
+  const totalCredits = credits.reduce((sum, t) => sum + (t.credit || 0), 0);
+  const netBalance = totalCredits - totalDebits;
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+        style: 'decimal',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount);
+  };
+  
   const handleDownload = async (format: 'xlsx' | 'csv' | 'json') => {
     // Re-order and rename columns for export
     const dataForExport = transactions.map(t => ({
@@ -94,9 +107,62 @@ const ResultsView = ({ transactions, onReset, onConversionComplete }: ResultsVie
   };
   
   return (
-    <div className="text-center">
-      <h2 className="text-2xl font-bold text-brand-dark mb-4">Conversion Complete!</h2>
-      <p className="text-brand-gray mb-6">{transactions.length} transactions found.</p>
+    <div className="text-center animate-fade-in">
+      <h2 className="text-3xl font-bold text-brand-dark mb-6">Conversion Complete!</h2>
+      
+      {/* Top Level Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div className="bg-white p-4 rounded-lg shadow-md border">
+            <p className="text-sm text-brand-gray">Files Processed</p>
+            <p className="text-2xl font-bold text-brand-dark">1</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-md border">
+            <p className="text-sm text-brand-gray">Successful</p>
+            <p className="text-2xl font-bold text-brand-dark">1</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-md border">
+            <p className="text-sm text-brand-gray">Transactions</p>
+            <p className="text-2xl font-bold text-brand-dark">{transactions.length}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-md border">
+            <p className="text-sm text-brand-gray">Pages Used</p>
+            <p className="text-2xl font-bold text-brand-dark">{pagesUsed}</p>
+        </div>
+      </div>
+      
+      {/* Detailed Financial Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 p-4 bg-gray-50 rounded-lg border text-center">
+        <div>
+            <p className="text-sm text-brand-gray">Transactions</p>
+            <p className="text-xl font-semibold text-brand-dark">{transactions.length}</p>
+        </div>
+        <div className="relative">
+            <p className="text-sm text-brand-gray">Debits</p>
+            <p className="text-xl font-semibold text-red-600">{formatCurrency(totalDebits)}</p>
+            <span className="absolute top-0 right-0 -mt-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">{debits.length}</span>
+        </div>
+        <div className="relative">
+            <p className="text-sm text-brand-gray">Credits</p>
+            <p className="text-xl font-semibold text-green-600">{formatCurrency(totalCredits)}</p>
+            <span className="absolute top-0 right-0 -mt-1 bg-green-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">{credits.length}</span>
+        </div>
+        <div>
+            <p className="text-sm text-brand-gray">Net Balance</p>
+            <p className={`text-xl font-semibold flex items-center justify-center ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(netBalance)}
+                {netBalance >= 0 ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75L12 3m0 0l3.75 3.75M12 3v18" />
+                    </svg>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25L12 21m0 0l-3.75-3.75M12 21V3" />
+                    </svg>
+                )}
+            </p>
+        </div>
+      </div>
+
 
       {/* Table Section */}
       <div className="border rounded-lg overflow-hidden mb-6">
@@ -106,27 +172,35 @@ const ResultsView = ({ transactions, onReset, onConversionComplete }: ResultsVie
               <tr>
                 <th scope="col" className="px-4 py-2 font-medium">Date</th>
                 <th scope="col" className="px-4 py-2 font-medium">Description</th>
-                <th scope="col" className="px-4 py-2 font-medium text-right">Debit</th>
-                <th scope="col" className="px-4 py-2 font-medium text-right">Credit</th>
-                <th scope="col" className="px-4 py-2 font-medium text-right">Balance</th>
+                <th scope="col" className="px-4 py-2 font-medium text-right">Amount</th>
+                <th scope="col" className="px-4 py-2 font-medium">Currency</th>
+                <th scope="col" className="px-4 py-2 font-medium">Type</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {transactions.map((transaction, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap">{transaction.date}</td>
-                  <td className="px-4 py-3">{transaction.description}</td>
-                  <td className="px-4 py-3 font-medium text-right whitespace-nowrap text-red-600">
-                    {transaction.debit ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(transaction.debit) : '-'}
-                  </td>
-                   <td className="px-4 py-3 font-medium text-right whitespace-nowrap text-green-600">
-                    {transaction.credit ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(transaction.credit) : '-'}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-right whitespace-nowrap">
-                    {transaction.balance != null ? new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(transaction.balance) : '-'}
-                  </td>
-                </tr>
-              ))}
+              {transactions.map((transaction, index) => {
+                  const isCredit = transaction.credit != null && transaction.credit > 0;
+                  const amount = isCredit ? transaction.credit : (transaction.debit != null ? -transaction.debit : 0);
+                  return (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap">{transaction.date}</td>
+                      <td className="px-4 py-3">{transaction.description}</td>
+                      <td className={`px-4 py-3 font-medium text-right whitespace-nowrap ${isCredit ? 'text-green-600' : 'text-red-600'}`}>
+                        {amount ? formatCurrency(amount) : '-'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-brand-gray">INR</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          isCredit 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {isCredit ? 'Credit' : 'Debit'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+              })}
             </tbody>
           </table>
         </div>

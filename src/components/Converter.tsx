@@ -1,15 +1,20 @@
 
-import { useState, useRef, DragEvent, ChangeEvent } from 'react';
-import { ExtractedTransaction, ConversionResult } from '../lib/types';
+
+import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
+import { ExtractedTransaction, ConversionResult, User } from '../lib/types';
 import ResultsView from './ResultsView';
 import UnlockPdf from './UnlockPdf';
 import { extractTransactionsFromApi } from '../services/apiService';
+import { checkUsageLimit } from '../lib/usage';
+import LimitReachedView from './LimitReachedView';
+
 
 interface ConverterProps {
   onConversionComplete: (result: ConversionResult) => void;
+  user: User | null;
 }
 
-const Converter = ({ onConversionComplete }: ConverterProps) => {
+const Converter = ({ onConversionComplete, user }: ConverterProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState<string | null>(null);
   const [lockedPdf, setLockedPdf] = useState<File | null>(null);
@@ -18,7 +23,22 @@ const Converter = ({ onConversionComplete }: ConverterProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ExtractedTransaction[] | null>(null);
+  const [limitError, setLimitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const runUsageCheck = () => {
+    const { limitReached, message } = checkUsageLimit(user);
+    if (limitReached) {
+      setLimitError(message);
+      return true;
+    }
+    setLimitError(null);
+    return false;
+  };
+
+  useEffect(() => {
+    runUsageCheck();
+  }, [user]);
 
   const resetState = () => {
     setFile(null);
@@ -29,9 +49,9 @@ const Converter = ({ onConversionComplete }: ConverterProps) => {
     setIsCheckingPdf(false);
     setResult(null);
   };
-
+  
   const processSelectedFile = async (selectedFile: File | null) => {
-    if (!selectedFile) return;
+    if (!selectedFile || runUsageCheck()) return;
 
     resetState();
     
@@ -73,7 +93,7 @@ const Converter = ({ onConversionComplete }: ConverterProps) => {
   
   const handleDragEnter = (event: DragEvent<HTMLDivElement>) => {
     preventDefaults(event);
-    if (!isLoading) setIsDragging(true);
+    if (!isLoading && !limitError) setIsDragging(true);
   };
 
   const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
@@ -87,14 +107,14 @@ const Converter = ({ onConversionComplete }: ConverterProps) => {
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     preventDefaults(event);
-    if (isLoading) return;
+    if (isLoading || limitError) return;
     setIsDragging(false);
     const droppedFile = event.dataTransfer.files?.[0];
     processSelectedFile(droppedFile || null);
   };
 
   const openFileDialog = () => {
-    if (!isLoading) fileInputRef.current?.click();
+    if (!isLoading && !limitError) fileInputRef.current?.click();
   };
   
   const handleUnlockSuccess = (unlockedFile: File, unlockedPassword?: string) => {
@@ -106,7 +126,7 @@ const Converter = ({ onConversionComplete }: ConverterProps) => {
   };
 
   const handleConvert = async () => {
-    if (!file) return;
+    if (!file || runUsageCheck()) return;
 
     setIsLoading(true);
     setError(null);
@@ -127,6 +147,14 @@ const Converter = ({ onConversionComplete }: ConverterProps) => {
   const dropzoneIdleClasses = "border-gray-300 bg-gray-50 hover:border-brand-blue cursor-pointer";
   const dropzoneDraggingClasses = "border-brand-blue bg-brand-blue-light";
   const dropzoneDisabledClasses = "border-gray-300 bg-gray-100 cursor-not-allowed";
+
+  if (limitError) {
+    return (
+        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-lg mx-auto">
+            <LimitReachedView message={limitError} user={user} />
+        </div>
+    );
+  }
 
   if (result) {
     return (

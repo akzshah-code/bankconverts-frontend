@@ -1,13 +1,15 @@
 
 
+
 import Converter from './Converter';
-import { ConversionResult } from '../lib/types';
+import { ConversionResult, User } from '../lib/types';
 
 interface HeroProps {
   onConversionComplete: (result: ConversionResult) => void;
+  user: User | null;
 }
 
-const Hero = ({ onConversionComplete }: HeroProps) => {
+const Hero = ({ onConversionComplete, user }: HeroProps) => {
   return (
     <section id="convert" className="py-12 md:py-16 bg-gray-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,7 +22,7 @@ const Hero = ({ onConversionComplete }: HeroProps) => {
           </p>
         </div>
         <div className="mt-8">
-            <Converter onConversionComplete={onConversionComplete} />
+            <Converter onConversionComplete={onConversionComplete} user={user} />
         </div>
       </div>
     </section>
