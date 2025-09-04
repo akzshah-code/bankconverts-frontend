@@ -1,0 +1,6 @@
+# This file provides a way for security researchers to report vulnerabilities.
+# We appreciate the security community's efforts in creating a safer web.
+Contact: mailto:security@bankconverts.com
+Expires: 2026-08-30T12:00:00.000Z
+Acknowledgments: https://bankconverts.com/security/acknowledgments
+Preferred-Languages: en
