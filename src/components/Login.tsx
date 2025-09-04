@@ -31,7 +31,7 @@ const Login = ({ onLogin }: LoginProps) => {
             id="email"
             name="email"
             autoComplete="email"
-            placeholder="admin@bankconverts.com"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -57,7 +57,7 @@ const Login = ({ onLogin }: LoginProps) => {
             <button
               type="button"
               onClick={() => setIsPasswordVisible(!isPasswordVisible)}
-              className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-brand-blue focus:outline-none"
+              className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-brand-primary focus:outline-none"
               aria-label={isPasswordVisible ? "Hide password" : "Show password"}
             >
               {isPasswordVisible ? (
@@ -83,6 +83,13 @@ const Login = ({ onLogin }: LoginProps) => {
           </button>
         </div>
       </form>
+       <div className="text-center mt-4">
+        <p className="text-xs text-brand-gray p-2 bg-gray-50 rounded-md">
+            <strong>Demo Tip:</strong> You can log in with any email and password.
+            <br />
+            To access the admin panel, use <code className="font-mono text-sm">admin@bankconverts.com</code>.
+        </p>
+      </div>
       <div className="text-center mt-6">
         <p className="text-sm text-brand-gray">
           Don't have an account?{' '}

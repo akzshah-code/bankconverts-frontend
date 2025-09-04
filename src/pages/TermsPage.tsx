@@ -10,9 +10,9 @@ interface TermsPageProps {
 
 const TermsPage = ({ user, onLogout }: TermsPageProps) => {
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Header user={user} onLogout={onLogout} />
-      <main className="flex-grow overflow-y-auto">
+      <main className="flex-grow">
         <TermsOfService />
       </main>
       <Footer />

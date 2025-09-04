@@ -11,9 +11,14 @@ This project converts bank statements into structured data using a public React 
 
 ## Frontend Setup (`bankconverts-frontend`)
 
-### Important: Project Cleanup
-
-Your project contains an unused `/functions` directory. This was likely from an earlier project structure. To prevent build errors and keep your project aligned with the two-repository architecture, it is highly recommended that you **delete the entire `functions` directory** from your `bankconverts-frontend` project before deploying to Cloudflare Pages.
+> [!IMPORTANT]
+> **CRITICAL ACTION REQUIRED: Delete the `/functions` Directory**
+>
+> Your project contains a `/functions` directory with outdated backend code. If this directory exists when you deploy to Cloudflare Pages, it will **override** the connection to your real backend worker and cause your application to **fail**.
+>
+> **You must delete the entire `/functions` directory from this frontend project.**
+>
+> This is the most common cause of deployment issues.
 
 ### 1. Install Dependencies
 
@@ -60,8 +65,10 @@ b. **Configure Build Settings:**
    - **Build output directory:** `dist`
 
 c. **Set Production Environment Variables:**
-   - `VITE_API_BASE_URL`: `https://bankconverts-backend.iamshahkarimabdul.workers.dev`
-   - `VITE_RAZORPAY_KEY_ID`: Your production Razorpay Key ID.
+   - Go to your Pages project **Settings > Environment variables**.
+   - Add the following variables for the **Production** environment:
+     - `VITE_API_BASE_URL`: `https://your-worker-name.your-subdomain.workers.dev` (replace with your actual worker URL)
+     - `VITE_RAZORPAY_KEY_ID`: Your production Razorpay Key ID.
 
 ---
 
@@ -69,46 +76,57 @@ c. **Set Production Environment Variables:**
 
 Follow these instructions in your separate, **private** `bankconverts-backend` repository.
 
-### 1. Install Dependencies
+### Method 1: Cloudflare Dashboard Setup (Definitive Fix)
+
+This is the most reliable way to configure your worker and resolve all errors.
+
+#### Step 1: Initial Deployment
+
+First, deploy your worker from your command line. **This initial deployment will likely show an error, which is expected.** Its purpose is to create the worker in your Cloudflare account so you can configure it through the dashboard.
 
 ```bash
+# Make sure you have installed dependencies first
 npm install
+
+# Now, run the deploy command. Ignore any errors for now.
+npm run deploy
 ```
 
-### 2. Set Up Local Environment Variables
+#### Step 2: Configure Settings in the Cloudflare Dashboard
 
-The backend worker needs your secure Google Gemini API key.
+Navigate to your worker in the Cloudflare dashboard to add the required settings.
 
-a. In the root of the *backend* project, create a file named `.dev.vars`.
+1.  In Cloudflare, go to **Workers & Pages** and select your `bankconverts-backend` worker.
+2.  Go to the **Settings** tab.
 
-b. Add your secret key.
+#### Step 2a: Add the API Key Secret
 
-```
-# .dev.vars (in backend project)
+1.  On the **Settings** page, click on **Variables**.
+2.  Scroll down to **Secret variables** and click **Add variable**.
+3.  Fill in the fields:
+    -   **Variable name:** `API_KEY`
+    -   **Value:** Paste your Google Gemini API key here.
+4.  Click **Save**.
 
-API_KEY=PASTE_YOUR_GOOGLE_GEMINI_API_KEY_HERE
-```
+> **Note:** It is normal for the **Bindings** tab to be empty. Secrets are now handled under **Variables**.
 
-### 3. Run the Development Server
+#### Step 2b: Add the Compatibility Flag (Crucial for Fixing Errors)
 
-This command starts the local Wrangler server for your backend API.
+1.  On the **Settings** page, click on **Runtime**.
+2.  Scroll down to **Compatibility Flags** and click **Add flag**.
+3.  A text box will appear. Type `nodejs_compat` into the box and press Enter.
+4.  Click **Save**.
+
+#### Step 3: Redeploy to Apply Settings
+
+Your settings are saved, but you must redeploy the worker for them to take effect.
+
+1.  Go to the **Deployments** tab for your worker.
+2.  Click **Create a deployment**.
+3.  Drag and drop your `bankconverts-backend` project folder into the upload box, or simply run the command-line tool again:
 
 ```bash
-npm run dev
+npm run deploy
 ```
 
-Your backend API should now be running at `http://127.0.0.1:8787`.
-
-### 4. Deployment to Cloudflare Workers
-
-a. **First-time deployment:**
-   ```bash
-   npm run deploy
-   ```
-   This will publish your worker and create a public URL.
-
-b. **Set Production Secret:** Your `API_KEY` must be set as a secret in the Cloudflare dashboard, not as a plaintext environment variable.
-   ```bash
-   npx wrangler secret put API_KEY
-   ```
-   You will be prompted to paste your secret key. This ensures it is encrypted and securely available to your live worker.
+After redeploying with these settings, your backend will be fully configured and your application will work correctly.

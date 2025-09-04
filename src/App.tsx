@@ -1,6 +1,4 @@
 
-
-
 import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { User, BlogPost, EmailTemplate, EmailRoute, ConversionResult } from './lib/types';
 import { users as initialUsers, blogPosts as initialBlogPosts, emailTemplates as initialEmailTemplates, emailRoutes as initialEmailRoutes } from './lib/mock-data';
