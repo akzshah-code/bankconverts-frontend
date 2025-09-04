@@ -43,7 +43,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <a href="/#" className="flex items-center space-x-2">
-              <img src="/Logo.png" alt="BankConverts Logo" className="h-10 w-auto" />
+              <img src="/logo.png" alt="BankConverts Logo" className="h-10 w-auto" />
               <div className="flex flex-col justify-center">
                  <span className="font-bold text-xl leading-none">
                     <span className="text-brand-blue">Bank</span><span className="text-brand-green">Converts</span>
