@@ -1,27 +1,30 @@
 
+
 import { useEffect } from 'react';
-import { ExtractedTransaction, ConversionResult } from '../lib/types';
-import ExcelJS from 'exceljs';
+import { ExtractedTransaction, ConversionHistoryItem } from '../lib/types';
+import { downloadTransactions } from '../lib/download';
 
 interface ResultsViewProps {
   transactions: ExtractedTransaction[];
+  fileName: string;
   onReset: () => void;
-  onConversionComplete: (result: ConversionResult) => void;
+  onConversionComplete: (items: ConversionHistoryItem[]) => void;
 }
 
-const ResultsView = ({ transactions, onReset, onConversionComplete }: ResultsViewProps) => {
+const ResultsView = ({ transactions, fileName, onReset, onConversionComplete }: ResultsViewProps) => {
   const pagesUsed = Math.ceil(transactions.length / 25) || 1;
 
   // When the component mounts with results, report the page usage.
   useEffect(() => {
-    const result: ConversionResult = {
-      transactions: transactions.length,
-      pages: pagesUsed,
-      fileCount: 1,
-      successfulFiles: 1,
-      processingTime: 0, // Not tracked for single conversions, but required by type.
+    const newItem: ConversionHistoryItem = {
+        id: `conv_${Date.now()}`,
+        fileName: fileName,
+        date: new Date().toISOString(),
+        pagesUsed: pagesUsed,
+        transactionCount: transactions.length,
+        transactions: transactions,
     };
-    onConversionComplete(result);
+    onConversionComplete([newItem]);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const debits = transactions.filter(t => t.debit != null && t.debit > 0);
@@ -39,71 +42,8 @@ const ResultsView = ({ transactions, onReset, onConversionComplete }: ResultsVie
     }).format(amount);
   };
   
-  const handleDownload = async (format: 'xlsx' | 'csv' | 'json') => {
-    // Re-order and rename columns for export
-    const dataForExport = transactions.map(t => ({
-      'Transaction Date': t.date,
-      'Description': t.description,
-      'Reference': t.reference,
-      'Value Date': t.valueDate,
-      'Debit': t.debit,
-      'Credit': t.credit,
-      'Balance': t.balance,
-      'Category': t.category,
-    }));
-    
-    const safeFileName = `Bankconverts ${new Date().toISOString().slice(0, 10)}`;
-
-    if (format === 'json') {
-      const jsonStr = JSON.stringify(transactions, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${safeFileName}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      return;
-    }
-    
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Transactions");
-
-    worksheet.columns = [
-      { header: 'Transaction Date', key: 'Transaction Date', width: 15 },
-      { header: 'Description', key: 'Description', width: 50 },
-      { header: 'Reference', key: 'Reference', width: 20 },
-      { header: 'Value Date', key: 'Value Date', width: 15 },
-      { header: 'Debit', key: 'Debit', width: 15, style: { numFmt: '#,##0.00' } },
-      { header: 'Credit', key: 'Credit', width: 15, style: { numFmt: '#,##0.00' } },
-      { header: 'Balance', key: 'Balance', width: 15, style: { numFmt: '#,##0.00' } },
-      { header: 'Category', key: 'Category', width: 20 },
-    ];
-
-    worksheet.addRows(dataForExport);
-    
-    const downloadFile = (blob: Blob, fileName: string) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    if (format === 'xlsx') {
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        downloadFile(blob, `${safeFileName}.xlsx`);
-    } else if (format === 'csv') {
-        const buffer = await workbook.csv.writeBuffer();
-        const blob = new Blob([buffer], { type: 'text/csv;charset=utf-8;' });
-        downloadFile(blob, `${safeFileName}.csv`);
-    }
+  const handleDownload = (format: 'xlsx' | 'csv' | 'json') => {
+    downloadTransactions(transactions, format, fileName);
   };
   
   return (

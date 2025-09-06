@@ -1,13 +1,14 @@
 
+
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { FileUpload } from '../components/FileUpload';
-import { User, ConversionResult } from '../lib/types';
+import { User, ConversionHistoryItem } from '../lib/types';
 
 interface BulkConvertPageProps {
   user: User | null;
   onLogout: () => void;
-  onConversionComplete: (result: ConversionResult) => void;
+  onConversionComplete: (items: ConversionHistoryItem[]) => void;
 }
 
 const BulkConvertPage = ({ user, onLogout, onConversionComplete }: BulkConvertPageProps) => {

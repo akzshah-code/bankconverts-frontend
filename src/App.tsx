@@ -1,6 +1,7 @@
 
+
 import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
-import { User, BlogPost, EmailTemplate, EmailRoute, ConversionResult } from './lib/types';
+import { User, BlogPost, EmailTemplate, EmailRoute, ConversionHistoryItem } from './lib/types';
 import { users as initialUsers, blogPosts as initialBlogPosts, emailTemplates as initialEmailTemplates, emailRoutes as initialEmailRoutes } from './lib/mock-data';
 import { getPlanDetails } from './lib/plans';
 
@@ -104,6 +105,9 @@ function App() {
       window.location.hash = foundUser.role === 'admin' ? '#admin' : '#dashboard';
     } else {
       const freePlanDetails = getPlanDetails('Free');
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 7);
+
       const standardUser: User = {
         id: `usr_${Date.now()}`,
         name: 'New User',
@@ -113,6 +117,8 @@ function App() {
         usage: { used: 0, total: freePlanDetails.pages },
         dailyUsage: { pagesUsed: 0, resetTimestamp: 0 },
         planRenews: 'N/A',
+        planExpires: expiryDate.toISOString(),
+        conversionHistory: [],
       };
       setUser(standardUser);
       setAllUsers([...allUsers, standardUser]);
@@ -129,6 +135,9 @@ function App() {
     }
 
     const planDetails = getPlanDetails(planName, billingCycle as 'monthly' | 'annual');
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 7);
+
     const newUser: User = {
       id: `usr_${Date.now()}`,
       name: fullName,
@@ -137,7 +146,9 @@ function App() {
       plan: planName,
       usage: { used: 0, total: planDetails.pages },
       dailyUsage: { pagesUsed: 0, resetTimestamp: 0 },
-      planRenews: billingCycle === 'annual' ? '1 year from now' : '1 month from now',
+      planRenews: planName === 'Free' ? 'N/A' : (billingCycle === 'annual' ? '1 year from now' : '1 month from now'),
+      planExpires: planName === 'Free' ? expiryDate.toISOString() : undefined,
+      conversionHistory: [],
     };
 
     // Asynchronously send a welcome email without blocking the registration flow.
@@ -178,6 +189,7 @@ function App() {
       plan: planName,
       usage: { used: 0, total: planDetails.pages },
       planRenews: billingCycle === 'annual' ? '1 year from now' : '1 month from now',
+      planExpires: undefined, // Remove trial expiration upon upgrading
     };
 
     // Asynchronously send a plan upgrade email.
@@ -196,12 +208,13 @@ function App() {
     window.location.hash = '#dashboard';
   };
   
-  const handleConversionComplete = useCallback((result: ConversionResult) => {
-    // Use a functional update for setUser to get the latest user state,
-    // avoiding stale closures and issues if multiple conversions happen quickly.
+  const handleConversionComplete = useCallback((items: ConversionHistoryItem[]) => {
     setUser(currentUser => {
-        if (!currentUser || result.pages === 0) return currentUser;
+        if (!currentUser || items.length === 0) return currentUser;
 
+        const totalPagesUsedInBatch = items.reduce((sum, item) => sum + item.pagesUsed, 0);
+        if (totalPagesUsedInBatch === 0) return currentUser;
+        
         const now = Date.now();
         const twentyFourHours = 24 * 60 * 60 * 1000;
   
@@ -214,18 +227,19 @@ function App() {
             ...currentUser,
             usage: {
                 ...currentUser.usage,
-                used: (currentUser.usage.used || 0) + result.pages,
+                used: (currentUser.usage.used || 0) + totalPagesUsedInBatch,
             },
             dailyUsage: {
-                pagesUsed: currentDailyUsage.pagesUsed + result.pages,
+                pagesUsed: currentDailyUsage.pagesUsed + totalPagesUsedInBatch,
                 resetTimestamp: currentDailyUsage.resetTimestamp,
             },
+            conversionHistory: [...(currentUser.conversionHistory || []), ...items],
         };
 
         setAllUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
         return updatedUser;
     });
-  }, [setAllUsers]); // Only depends on the stable setter function.
+  }, [setAllUsers]);
 
   const renderPage = () => {
     if (!user && (route.startsWith('#dashboard') || route.startsWith('#admin') || route.startsWith('#bulk-convert'))) {

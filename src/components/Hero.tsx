@@ -1,11 +1,10 @@
 
 
-
 import Converter from './Converter';
-import { ConversionResult, User } from '../lib/types';
+import { ConversionHistoryItem, User } from '../lib/types';
 
 interface HeroProps {
-  onConversionComplete: (result: ConversionResult) => void;
+  onConversionComplete: (items: ConversionHistoryItem[]) => void;
   user: User | null;
 }
 

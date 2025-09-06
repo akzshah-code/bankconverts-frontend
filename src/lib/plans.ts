@@ -1,3 +1,4 @@
+
 // This file acts as a single source of truth for subscription plan details.
 // It ensures that when a user registers for a plan, the correct usage limits
 // are applied to their account.
@@ -19,16 +20,16 @@ export const PLAN_DETAILS: PlanDetails = {
     annual: { pages: 5 }, // Free plan has no annual cycle, but added for type safety.
   },
   Starter: {
-    monthly: { pages: 400 },
-    annual: { pages: 4800 },
+    monthly: { pages: 500 },
+    annual: { pages: 6000 },
   },
   Professional: {
-    monthly: { pages: 1000 },
-    annual: { pages: 12000 },
+    monthly: { pages: 1250 },
+    annual: { pages: 15000 },
   },
   Business: {
-    monthly: { pages: 4000 },
-    annual: { pages: 48000 },
+    monthly: { pages: 5000 },
+    annual: { pages: 60000 },
   },
 };
 

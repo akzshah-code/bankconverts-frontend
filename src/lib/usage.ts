@@ -28,8 +28,17 @@ export const checkUsageLimit = (user: User | null): { limitReached: boolean, mes
         return { limitReached: false, message: '' };
     }
 
-    // Case 2: Registered Free User (5 pages / 24 hours)
+    // Case 2: Registered Free User (7-day trial, then upgrade required)
     if (user.plan === 'Free') {
+        // First, check if the trial period has expired. This is the most restrictive rule.
+        if (user.planExpires && now > new Date(user.planExpires).getTime()) {
+            return {
+                limitReached: true,
+                message: "Your 7-day free trial has expired and is non-renewable. Please upgrade your plan to continue converting documents."
+            };
+        }
+
+        // If the trial is still active, check the daily usage limit.
         const dailyUsage = user.dailyUsage || { pagesUsed: 0, resetTimestamp: 0 };
         if (now < dailyUsage.resetTimestamp && dailyUsage.pagesUsed >= 5) {
              const resetTime = new Date(dailyUsage.resetTimestamp).toLocaleString();

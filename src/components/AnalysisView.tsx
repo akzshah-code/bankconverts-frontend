@@ -1,8 +1,13 @@
-import { ConversionResult } from '../lib/types';
 import { StatCard } from './shared/StatCard';
 
+interface BatchResultSummary {
+    transactions: number;
+    pages: number;
+    fileCount: number;
+    successfulFiles: number;
+}
 interface AnalysisViewProps {
-    batchResult: ConversionResult;
+    batchResult: BatchResultSummary;
     onDownload: (format: 'xlsx' | 'csv' | 'json') => void;
 }
 

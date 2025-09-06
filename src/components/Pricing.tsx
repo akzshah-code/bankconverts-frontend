@@ -6,23 +6,22 @@ interface Plan {
   name: User['plan'];
   price: string;
   billingCycle: string;
-  gstText: string;
   features: string[];
   isEnterprise?: boolean;
 }
 
 const pricingData: { monthly: Plan[]; annual: Plan[] } = {
   monthly: [
-    { name: 'Starter', price: '₹875', billingCycle: '/month', gstText: '+ 18% GST applicable', features: ['400 pages / month'] },
-    { name: 'Professional', price: '₹1,850', billingCycle: '/month', gstText: '+ 18% GST applicable', features: ['1000 pages / month'] },
-    { name: 'Business', price: '₹3,100', billingCycle: '/month', gstText: '+ 18% GST applicable', features: ['4000 pages / month'] },
-    { name: 'Free', price: 'Need More?', billingCycle: '', gstText: '', features: [], isEnterprise: true },
+    { name: 'Starter', price: '₹975', billingCycle: '/month', features: ['500 pages / month'] },
+    { name: 'Professional', price: '₹2,000', billingCycle: '/month', features: ['1,250 pages / month'] },
+    { name: 'Business', price: '₹3,500', billingCycle: '/month', features: ['5,000 pages / month'] },
+    { name: 'Free', price: 'Need More?', billingCycle: '', features: [], isEnterprise: true },
   ],
   annual: [
-    { name: 'Starter', price: '₹5,250', billingCycle: '/year', gstText: '+ 18% GST applicable', features: ['4800 pages / year'] },
-    { name: 'Professional', price: '₹11,100', billingCycle: '/year', gstText: '+ 18% GST applicable', features: ['12000 pages / year'] },
-    { name: 'Business', price: '₹18,600', billingCycle: '/year', gstText: '+ 18% GST applicable', features: ['48000 pages / year'] },
-    { name: 'Free', price: 'Need More?', billingCycle: '', gstText: '', features: [], isEnterprise: true },
+    { name: 'Starter', price: '₹9,750', billingCycle: '/year', features: ['6,000 pages / year'] },
+    { name: 'Professional', price: '₹20,000', billingCycle: '/year', features: ['15,000 pages / year'] },
+    { name: 'Business', price: '₹35,000', billingCycle: '/year', features: ['60,000 pages / year'] },
+    { name: 'Free', price: 'Need More?', billingCycle: '', features: [], isEnterprise: true },
   ],
 };
 
@@ -50,7 +49,6 @@ const PricingCard: FC<{ plan: Plan; onCtaClick: () => void; userPlan: string | u
               <span className="text-4xl font-bold text-brand-dark">{plan.price}</span>
               <span className="text-brand-gray">{plan.billingCycle}</span>
             </div>
-            <p className="text-sm text-brand-gray mt-1">{plan.gstText}</p>
           </>
         )}
       </div>
@@ -102,10 +100,8 @@ const Pricing = ({ user, onPaymentSuccess }: PricingProps) => {
         }
 
         const basePrice = parseInt(plan.price.replace(/[^0-9]/g, ''), 10);
-        const priceWithGst = basePrice * 1.18;
         // Razorpay expects the amount in the smallest currency unit (paise for INR).
-        // Round to avoid floating point inaccuracies before converting to integer.
-        const priceInPaise = Math.round(priceWithGst * 100);
+        const priceInPaise = basePrice * 100;
         
         const options = {
             key: razorpayKey,
@@ -212,7 +208,7 @@ const Pricing = ({ user, onPaymentSuccess }: PricingProps) => {
                             </button>
                         </div>
                         <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full hidden sm:inline-block animate-fade-in">
-                            Save 50% Yearly!
+                            Get 2 Months Free!
                         </span>
                     </div>
                 </div>

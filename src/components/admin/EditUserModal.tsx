@@ -56,6 +56,7 @@ const EditUserModal = ({ user, onSave, onClose }: EditUserModalProps) => {
                 <option>Free</option>
                 <option>Starter</option>
                 <option>Professional</option>
+                <option>Business</option>
             </select>
           </div>
            <div className="grid grid-cols-2 gap-4">

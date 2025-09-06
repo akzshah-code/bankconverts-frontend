@@ -1,7 +1,7 @@
 
 
 import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
-import { ExtractedTransaction, ConversionResult, User } from '../lib/types';
+import { ExtractedTransaction, ConversionHistoryItem, User } from '../lib/types';
 import ResultsView from './ResultsView';
 import UnlockPdf from './UnlockPdf';
 import { extractTransactionsFromApi } from '../services/apiService';
@@ -10,7 +10,7 @@ import LimitReachedView from './LimitReachedView';
 
 
 interface ConverterProps {
-  onConversionComplete: (result: ConversionResult) => void;
+  onConversionComplete: (items: ConversionHistoryItem[]) => void;
   user: User | null;
 }
 
@@ -22,7 +22,7 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<ExtractedTransaction[] | null>(null);
+  const [result, setResult] = useState<{ transactions: ExtractedTransaction[], fileName: string } | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,7 +134,7 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
 
     try {
         const responseData = await extractTransactionsFromApi(file, password);
-        setResult(responseData);
+        setResult({ transactions: responseData, fileName: file.name });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(errorMessage);
@@ -159,7 +159,12 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
   if (result) {
     return (
       <div className="bg-white rounded-lg shadow-2xl p-8 max-w-4xl mx-auto w-full">
-        <ResultsView transactions={result} onReset={resetState} onConversionComplete={onConversionComplete} />
+        <ResultsView 
+            transactions={result.transactions} 
+            fileName={result.fileName}
+            onReset={resetState} 
+            onConversionComplete={onConversionComplete} 
+        />
       </div>
     );
   }

@@ -11,6 +11,7 @@ export const users: User[] = [
     // FIX: Added the required 'dailyUsage' property.
     dailyUsage: { pagesUsed: 0, resetTimestamp: 0 },
     planRenews: '9/23/2025',
+    planExpires: undefined,
   },
   {
     id: 'usr_001',
@@ -22,6 +23,7 @@ export const users: User[] = [
     // FIX: Added the required 'dailyUsage' property.
     dailyUsage: { pagesUsed: 0, resetTimestamp: 0 },
     planRenews: '10/15/2024',
+    planExpires: undefined,
   },
     {
     id: 'usr_002',
@@ -33,6 +35,7 @@ export const users: User[] = [
     // FIX: Added the required 'dailyUsage' property.
     dailyUsage: { pagesUsed: 0, resetTimestamp: 0 },
     planRenews: '10/22/2024',
+    planExpires: undefined,
   },
 ];
 

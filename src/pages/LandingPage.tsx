@@ -1,4 +1,5 @@
 
+
 import Header from '../components/Header';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
@@ -6,22 +7,23 @@ import BankSupport from '../components/BankSupport';
 import UsageTiers from '../components/UsageTiers';
 import CallToAction from '../components/CallToAction';
 import Footer from '../components/Footer';
-import { User, ConversionResult } from '../lib/types';
+import { User, ConversionHistoryItem } from '../lib/types';
 import { updateAnonymousUsage } from '../lib/usage';
 
 interface LandingPageProps {
   user: User | null;
   onLogout: () => void;
-  onConversionComplete: (result: ConversionResult) => void;
+  onConversionComplete: (items: ConversionHistoryItem[]) => void;
 }
 
 const LandingPage = ({ user, onLogout, onConversionComplete }: LandingPageProps) => {
-  const handleLandingConversion = (result: ConversionResult) => {
+  const handleLandingConversion = (items: ConversionHistoryItem[]) => {
     if (!user) {
-      updateAnonymousUsage(result.pages);
+      const totalPages = items.reduce((sum, item) => sum + item.pagesUsed, 0);
+      updateAnonymousUsage(totalPages);
     }
     // This will update state for logged-in users via App.tsx
-    onConversionComplete(result);
+    onConversionComplete(items);
   };
   
   return (

@@ -16,6 +16,8 @@ export interface User {
     resetTimestamp: number;
   };
   planRenews: string;
+  planExpires?: string;
+  conversionHistory?: ConversionHistoryItem[]; 
 }
 
 export interface BlogPost {
@@ -54,6 +56,16 @@ export interface ExtractedTransaction {
   balance: number;
   category: string;
 }
+
+export interface ConversionHistoryItem {
+  id: string;
+  fileName: string;
+  date: string; // ISO string
+  pagesUsed: number;
+  transactionCount: number;
+  transactions: ExtractedTransaction[];
+}
+
 
 // --- New Types for Bulk Upload Feature ---
 

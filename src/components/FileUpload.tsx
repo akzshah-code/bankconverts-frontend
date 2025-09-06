@@ -2,8 +2,7 @@
 
 import { useState, useRef, ChangeEvent, DragEvent, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
-import ExcelJS from 'exceljs';
-import { AuthUser, FileState, ConversionResult } from '../lib/types';
+import { AuthUser, FileState, ConversionHistoryItem } from '../lib/types';
 import { extractTransactionsFromApi } from '../services/apiService';
 import { FileUploadIcon, CloudUploadIcon, LockIcon, XIcon, CogsIcon } from './Icon.tsx';
 import { PasswordModal } from './PasswordModal.tsx';
@@ -11,6 +10,7 @@ import { AnalysisView } from './AnalysisView.tsx';
 import CliCommandView from './CliCommandView.tsx';
 import { checkUsageLimit } from '../lib/usage';
 import LimitReachedView from './LimitReachedView.tsx';
+import { downloadTransactions } from '../lib/download';
 
 
 const generateId = () => `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -27,11 +27,18 @@ const StatusBadge = ({ status }: { status: FileState['status'] }) => {
     return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${className}`}>{text}</span>;
 };
 
-export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | null, onConversionComplete: (result: ConversionResult) => void }) => {
+interface BatchResultSummary {
+    transactions: number;
+    pages: number;
+    fileCount: number;
+    successfulFiles: number;
+}
+
+export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | null, onConversionComplete: (items: ConversionHistoryItem[]) => void }) => {
     const [files, setFiles] = useState<FileState[]>([]);
     const [isProcessingBatch, setIsProcessingBatch] = useState(false);
     const [processingFileIndex, setProcessingFileIndex] = useState(0);
-    const [batchResult, setBatchResult] = useState<ConversionResult | null>(null);
+    const [batchResult, setBatchResult] = useState<BatchResultSummary | null>(null);
     const [globalError, setGlobalError] = useState<string | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -194,92 +201,60 @@ export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | nu
             return;
         }
         
-        const startTime = Date.now();
         setIsProcessingBatch(true);
         setGlobalError(null);
         setBatchResult(null);
 
-        let totalPages = 0;
-        let totalTransactions = 0;
-        let successfulFiles = 0;
-        
         const filesToProcess = files.filter(f => f.status === 'queued');
 
         for (let i = 0; i < filesToProcess.length; i++) {
             setProcessingFileIndex(i + 1);
-            const file = filesToProcess[i];
-            const result = await processFile(file.id);
-            if (result) {
-                totalPages += result.pages;
-                totalTransactions += result.transactions;
-                if (result.transactions > 0) successfulFiles++;
-            }
+            await processFile(filesToProcess[i].id);
         }
 
-        const endTime = Date.now();
-        const processingTime = (endTime - startTime) / 1000;
+        // After all processing is done, aggregate results
+        const finalFilesState = files; // Use the latest state
+        let totalPages = 0;
+        let totalTransactions = 0;
+        let successfulFiles = 0;
 
-        const finalResult: ConversionResult = {
+        const historyItems: ConversionHistoryItem[] = [];
+
+        finalFilesState.forEach(f => {
+            if (f.status === 'success') {
+                totalPages += f.pages;
+                totalTransactions += f.transactions.length;
+                successfulFiles++;
+                historyItems.push({
+                    id: `conv_${f.id}`,
+                    fileName: f.file.name,
+                    date: new Date().toISOString(),
+                    pagesUsed: f.pages,
+                    transactionCount: f.transactions.length,
+                    transactions: f.transactions,
+                });
+            }
+        });
+
+        if (user && historyItems.length > 0) {
+            onConversionComplete(historyItems);
+        }
+
+        const summary: BatchResultSummary = {
             transactions: totalTransactions,
             pages: totalPages,
             fileCount: files.length,
             successfulFiles,
-            processingTime,
         };
-        setBatchResult(finalResult);
-        if(user && totalPages > 0) onConversionComplete(finalResult);
+
+        setBatchResult(summary);
         setIsProcessingBatch(false);
         setProcessingFileIndex(0);
     };
 
     const handleDownloadCombined = async (format: 'xlsx' | 'csv' | 'json') => {
         const allTransactions = files.flatMap(f => f.status === 'success' ? f.transactions : []);
-        if (allTransactions.length === 0) return;
-        const safeFileName = `Bankconverts ${new Date().toISOString().slice(0, 10)}`;
-
-        const dataForExport = allTransactions.map(t => ({
-            'Transaction Date': t.date,
-            'Description': t.description,
-            'Reference': t.reference,
-            'Value Date': t.valueDate,
-            'Debit': t.debit,
-            'Credit': t.credit,
-            'Balance': t.balance,
-            'Category': t.category,
-        }));
-
-        if (format === 'json') {
-            const jsonString = JSON.stringify(dataForExport, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `${safeFileName}.json`;
-            document.body.appendChild(a); a.click();
-            document.body.removeChild(a); URL.revokeObjectURL(url);
-            return;
-        }
-
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet("Combined Transactions");
-        worksheet.columns = [
-            { header: 'Transaction Date', key: 'Transaction Date', width: 15 },
-            { header: 'Description', key: 'Description', width: 50 },
-            { header: 'Reference', key: 'Reference', width: 20 },
-            { header: 'Value Date', key: 'Value Date', width: 15 },
-            { header: 'Debit', key: 'Debit', width: 15, style: { numFmt: '#,##0.00' } },
-            { header: 'Credit', key: 'Credit', width: 15, style: { numFmt: '#,##0.00' } },
-            { header: 'Balance', key: 'Balance', width: 15, style: { numFmt: '#,##0.00' } },
-            { header: 'Category', key: 'Category', width: 20 },
-        ];
-        worksheet.addRows(dataForExport);
-
-        const buffer = format === 'xlsx' ? await workbook.xlsx.writeBuffer() : await workbook.csv.writeBuffer();
-        const blob = new Blob([buffer], { type: format === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `${safeFileName}.${format}`;
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a); URL.revokeObjectURL(url);
+        downloadTransactions(allTransactions, format, 'Bankconverts_Combined_Export');
     };
     
     const hasQueue = files.length > 0;
