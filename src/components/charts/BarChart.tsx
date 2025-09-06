@@ -14,7 +14,7 @@ const BarChart: FC<BarChartProps> = ({ data }) => {
 
   return (
     <div className="w-full overflow-x-auto p-4">
-      <svg width={totalWidth} height={chartHeight + 40} className="font-sans">
+      <svg width={totalWidth} height={chartHeight + 55} className="font-sans">
         <g>
           {data.map((d, i) => {
             const barHeight = (d.value / maxValue) * chartHeight;
@@ -33,19 +33,19 @@ const BarChart: FC<BarChartProps> = ({ data }) => {
                 />
                 <text
                   x={x + barWidth / 2}
-                  y={y - 5}
-                  textAnchor="middle"
-                  className="text-sm font-semibold fill-current text-brand-dark"
-                >
-                  {d.value}
-                </text>
-                <text
-                  x={x + barWidth / 2}
                   y={chartHeight + 20}
                   textAnchor="middle"
                   className="text-xs fill-current text-brand-gray"
                 >
                   {d.label}
+                </text>
+                <text
+                  x={x + barWidth / 2}
+                  y={chartHeight + 38}
+                  textAnchor="middle"
+                  className="text-sm font-semibold fill-current text-brand-dark"
+                >
+                  {d.value}
                 </text>
               </g>
             );

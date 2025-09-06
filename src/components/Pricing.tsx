@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect, type FC } from 'react';
 import { User } from '../lib/types';
 
@@ -10,7 +11,7 @@ interface Plan {
   isEnterprise?: boolean;
 }
 
-const pricingData: { monthly: Plan[]; annual: Plan[] } = {
+export const pricingData: { monthly: Plan[]; annual: Plan[] } = {
   monthly: [
     { name: 'Starter', price: '₹975', billingCycle: '/month', features: ['500 pages / month'] },
     { name: 'Professional', price: '₹2,000', billingCycle: '/month', features: ['1,250 pages / month'] },

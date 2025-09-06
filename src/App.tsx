@@ -4,6 +4,9 @@ import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { User, BlogPost, EmailTemplate, EmailRoute, ConversionHistoryItem } from './lib/types';
 import { users as initialUsers, blogPosts as initialBlogPosts, emailTemplates as initialEmailTemplates, emailRoutes as initialEmailRoutes } from './lib/mock-data';
 import { getPlanDetails } from './lib/plans';
+import { generateInvoicePdfAsBase64 } from './lib/invoice';
+import { pricingData } from './components/Pricing';
+
 
 // --- Lazy-loaded Page Components ---
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -203,6 +206,32 @@ function App() {
 
     setUser(updatedUser);
     setAllUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
+
+    // --- Generate and Send Branded Invoice ---
+    const sendInvoice = async () => {
+        try {
+            const planData = pricingData[billingCycle].find(p => p.name === planName);
+            if (!planData) throw new Error("Could not find pricing data for invoice.");
+
+            const pdfBase64 = await generateInvoicePdfAsBase64(updatedUser, planName, billingCycle, planData.price);
+
+            await fetch(`${API_BASE_URL}/send-invoice-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    name: updatedUser.name, 
+                    email: updatedUser.email, 
+                    planName: planName,
+                    price: planData.price,
+                    pdfBase64: pdfBase64,
+                }),
+            });
+        } catch (invoiceError) {
+            // Log the error for debugging but don't interrupt the user flow.
+            console.error("Failed to send branded invoice:", invoiceError);
+        }
+    };
+    sendInvoice(); // Fire-and-forget
 
     alert(`Upgrade successful! You are now on the ${planName} plan.`);
     window.location.hash = '#dashboard';
