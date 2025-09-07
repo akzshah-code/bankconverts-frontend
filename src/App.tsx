@@ -59,7 +59,16 @@ function App() {
     }
   });
 
-  const [allPosts, setAllPosts] = useState<BlogPost[]>(initialBlogPosts);
+  const [allPosts, setAllPosts] = useState<BlogPost[]>(() => {
+    try {
+      const savedPosts = localStorage.getItem('allPosts');
+      return savedPosts ? JSON.parse(savedPosts) : initialBlogPosts;
+    } catch (error) {
+      console.error("Failed to parse allPosts from localStorage", error);
+      return initialBlogPosts;
+    }
+  });
+
   const [allTemplates, setAllTemplates] = useState<EmailTemplate[]>(initialEmailTemplates);
   const [allRoutes, setAllRoutes] = useState<EmailRoute[]>(initialEmailRoutes);
 
@@ -99,6 +108,15 @@ function App() {
       console.error("Failed to save allUsers to localStorage", error);
     }
   }, [allUsers]);
+  
+  // Persist the master blog post list whenever it changes.
+  useEffect(() => {
+    try {
+      localStorage.setItem('allPosts', JSON.stringify(allPosts));
+    } catch (error) {
+      console.error("Failed to save allPosts to localStorage", error);
+    }
+  }, [allPosts]);
 
 
   const handleLogin = (email: string) => {

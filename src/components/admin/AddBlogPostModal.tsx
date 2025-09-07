@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, ChangeEvent } from 'react';
 import { BlogPost } from '../../lib/types';
 
 interface AddBlogPostModalProps {
@@ -11,7 +11,20 @@ const AddBlogPostModal = ({ onSave, onClose }: AddBlogPostModalProps) => {
   const [author, setAuthor] = useState('Admin');
   const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
-  const [featuredImage, setFeaturedImage] = useState<File | null>(null);
+  const [featuredImage, setFeaturedImage] = useState<string | null>(null);
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFeaturedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFeaturedImage(null);
+    }
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -20,7 +33,7 @@ const AddBlogPostModal = ({ onSave, onClose }: AddBlogPostModalProps) => {
       author,
       excerpt,
       content: content || excerpt, // Use content, or fallback to excerpt
-      featuredImage: featuredImage?.name, // Just save the file name for mock purposes
+      featuredImage: featuredImage || undefined,
     });
   };
 
@@ -44,7 +57,10 @@ const AddBlogPostModal = ({ onSave, onClose }: AddBlogPostModalProps) => {
           </div>
           <div>
             <label htmlFor="featuredImage" className="block text-sm font-medium text-gray-700">Featured Image</label>
-            <input type="file" name="featuredImage" id="featuredImage" accept="image/*" onChange={(e) => setFeaturedImage(e.target.files?.[0] || null)} className="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-blue-light file:text-brand-blue hover:file:bg-brand-blue/20"/>
+            {featuredImage && (
+              <img src={featuredImage} alt="Preview" className="mt-2 h-24 w-auto rounded-md object-cover" />
+            )}
+            <input type="file" name="featuredImage" id="featuredImage" accept="image/*" onChange={handleImageChange} className="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-blue-light file:text-brand-blue hover:file:bg-brand-blue/20"/>
           </div>
           <div>
             <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700">Excerpt</label>

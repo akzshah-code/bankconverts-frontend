@@ -19,6 +19,17 @@ const EditBlogPostModal = ({ post, onSave, onClose }: EditBlogPostModalProps) =>
     setFormData((prev: BlogPost) => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, featuredImage: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSave(formData);
@@ -33,7 +44,7 @@ const EditBlogPostModal = ({ post, onSave, onClose }: EditBlogPostModalProps) =>
              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
             <input type="text" name="title" id="title" value={formData.title} onChange={handleChange} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-brand-blue focus:border-brand-blue"/>
@@ -42,9 +53,20 @@ const EditBlogPostModal = ({ post, onSave, onClose }: EditBlogPostModalProps) =>
             <label htmlFor="author" className="block text-sm font-medium text-gray-700">Author</label>
             <input type="text" name="author" id="author" value={formData.author} onChange={handleChange} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-brand-blue focus:border-brand-blue"/>
           </div>
+           <div>
+            <label htmlFor="featuredImageEdit" className="block text-sm font-medium text-gray-700">Featured Image</label>
+            {formData.featuredImage && (
+              <img src={formData.featuredImage} alt="Current" className="mt-2 h-24 w-auto rounded-md object-cover" />
+            )}
+            <input type="file" name="featuredImage" id="featuredImageEdit" accept="image/*" onChange={handleImageChange} className="mt-1 w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-blue-light file:text-brand-blue hover:file:bg-brand-blue/20" />
+          </div>
           <div>
             <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700">Excerpt</label>
             <textarea name="excerpt" id="excerpt" value={formData.excerpt} onChange={handleChange} rows={4} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-brand-blue focus:border-brand-blue"/>
+          </div>
+           <div>
+            <label htmlFor="content" className="block text-sm font-medium text-gray-700">Full Content</label>
+            <textarea name="content" id="content" value={formData.content} onChange={handleChange} rows={8} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-brand-blue focus:border-brand-blue"/>
           </div>
           <div className="flex justify-end space-x-3 pt-4">
             <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md font-semibold hover:bg-gray-300">Cancel</button>
