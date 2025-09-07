@@ -13,7 +13,7 @@ const DonutChart: FC<DonutChartProps> = ({ percentage, label }) => {
 
   return (
     <div className="relative flex items-center justify-center w-36 h-36">
-      <svg className="w-full h-full" viewBox="0 0 120 120">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
         <circle
           className="text-gray-200"
           strokeWidth="10"
@@ -34,7 +34,6 @@ const DonutChart: FC<DonutChartProps> = ({ percentage, label }) => {
           r={radius}
           cx="60"
           cy="60"
-          transform="rotate(-90 60 60)"
           style={{ transition: 'stroke-dashoffset 0.5s ease-out' }}
         />
       </svg>

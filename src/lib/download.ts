@@ -22,7 +22,11 @@ export const downloadTransactions = async (
         return;
     }
 
-    const safeFileName = `${fileNamePrefix.replace(/[^a-z0-9_.-]/gi, '_')}`;
+    // Sanitize the prefix and remove the original extension to prevent double extensions (e.g., file.pdf.xlsx)
+    const sanitizedPrefix = fileNamePrefix.replace(/[^a-z0-9_.-]/gi, '_');
+    const lastDotIndex = sanitizedPrefix.lastIndexOf('.');
+    const baseName = (lastDotIndex > 0) ? sanitizedPrefix.substring(0, lastDotIndex) : sanitizedPrefix;
+
 
     const dataForExport = transactions.map(t => ({
       'Transaction Date': t.date,
@@ -38,7 +42,7 @@ export const downloadTransactions = async (
     if (format === 'json') {
       const jsonStr = JSON.stringify(transactions, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
-      downloadFile(blob, `${safeFileName}.json`);
+      downloadFile(blob, `${baseName}.json`);
       return;
     }
     
@@ -61,10 +65,10 @@ export const downloadTransactions = async (
     if (format === 'xlsx') {
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        downloadFile(blob, `${safeFileName}.xlsx`);
+        downloadFile(blob, `${baseName}.xlsx`);
     } else if (format === 'csv') {
         const buffer = await workbook.csv.writeBuffer();
         const blob = new Blob([buffer], { type: 'text/csv;charset=utf-8;' });
-        downloadFile(blob, `${safeFileName}.csv`);
+        downloadFile(blob, `${baseName}.csv`);
     }
 };
