@@ -289,13 +289,23 @@ function App() {
   }, [setAllUsers]);
 
   const renderPage = () => {
-    if (!user && (route.startsWith('#dashboard') || route.startsWith('#admin') || route.startsWith('#bulk-convert'))) {
-      return <LoginPage onLogin={handleLogin} />;
+    const isAdminRoute = route.startsWith('#admin');
+    const isUserRoute = route.startsWith('#dashboard') || route.startsWith('#bulk-convert');
+
+    // Handle guests trying to access protected areas
+    if (!user) {
+        if (isAdminRoute || isUserRoute) {
+            // Guest trying to access any protected route, show login
+            return <LoginPage onLogin={handleLogin} />;
+        }
+    } else { // Handle logged-in users
+        if (user.role !== 'admin' && isAdminRoute) {
+            // Non-admin trying to access admin area, show their dashboard
+            return <DashboardPage user={user} onLogout={handleLogout} />;
+        }
     }
 
-    if (user?.role !== 'admin' && route.startsWith('#admin')) {
-      return <DashboardPage user={user} onLogout={handleLogout} />;
-    }
+    // If we reach here, the user has permission. Render the requested page.
     
     if (route.startsWith('#blog/')) {
       const postId = route.split('/')[1];

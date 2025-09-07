@@ -30,7 +30,10 @@ const Header = ({ user, onLogout }: HeaderProps) => {
   ];
 
   const adminLinks: NavLink[] = [
-    ...userLinks,
+    { href: '#dashboard', label: 'Dashboard' },
+    { href: '#pricing', label: 'Pricing' },
+    { href: '#blog', label: 'Blog' },
+    { href: '#bulk-convert', label: 'Bulk Convert' },
     { href: '#admin', label: 'Admin', isHighlighted: true },
   ];
 
