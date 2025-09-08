@@ -7,10 +7,6 @@ import { extractTransactionsFromApi } from '../services/apiService';
 import { checkUsageLimit } from '../lib/usage';
 import LimitReachedView from './LimitReachedView';
 import { PDFDocument } from 'pdf-lib';
-import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
-
-// Configure the worker for pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.mjs`;
 
 interface ConverterProps {
   onConversionComplete: (items: ConversionHistoryItem[]) => void;
@@ -27,7 +23,6 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ transactions: ExtractedTransaction[], fileName: string } | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
-  const [repairMessage, setRepairMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const runUsageCheck = () => {
@@ -52,7 +47,6 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
     setIsLoading(false);
     setIsCheckingPdf(false);
     setResult(null);
-    setRepairMessage(null);
   };
   
   const processSelectedFile = async (selectedFile: File | null) => {
@@ -71,7 +65,7 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
             setFile(selectedFile);
         }
       } catch (e) {
-        // Assume it might be corrupted but salvageable, let the repair mechanism handle it.
+        // Assume it might be corrupted but salvageable, let the backend repair mechanism handle it.
         setFile(selectedFile);
       } finally {
         setIsCheckingPdf(false);
@@ -129,90 +123,21 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
     }
   };
 
-  // --- PDF Repair Functions ---
-
-  const repairPdfWithPdfLib = async (originalFile: File): Promise<File> => {
-    const fileBuffer = await originalFile.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
-    const pdfBytes = await pdfDoc.save();
-    return new File([new Uint8Array(pdfBytes)], originalFile.name, { type: 'application/pdf' });
-  };
-  
-  const rebuildPdfAsImagePdf = async (originalFile: File): Promise<File> => {
-      const fileBuffer = await originalFile.arrayBuffer();
-      const loadingTask = pdfjsLib.getDocument(fileBuffer);
-      const pdf = await loadingTask.promise;
-      const newPdfDoc = await PDFDocument.create();
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 1.5 });
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-
-          if (context) {
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            const pngImageBytes = await new Promise<string>((resolve) => canvas.toBlob(blob => {
-              if (!blob) return;
-              const reader = new FileReader();
-              reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-              reader.readAsDataURL(blob);
-            }, 'image/png'));
-
-            const pngImage = await newPdfDoc.embedPng(pngImageBytes);
-            const newPage = newPdfDoc.addPage([viewport.width, viewport.height]);
-            newPage.drawImage(pngImage, { x: 0, y: 0, width: viewport.width, height: viewport.height });
-          }
-      }
-      
-      const pdfBytes = await newPdfDoc.save();
-      return new File([new Uint8Array(pdfBytes)], originalFile.name, { type: 'application/pdf' });
-  };
-
   const handleConvert = async () => {
     if (!file || runUsageCheck()) return;
 
     setIsLoading(true);
     setError(null);
     setResult(null);
-    setRepairMessage(null);
 
     try {
         const responseData = await extractTransactionsFromApi(file, password);
         setResult({ transactions: responseData, fileName: file.name });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      const isRepairable = /corrupted|unsupported encryption/i.test(errorMessage);
-
-      if (isRepairable) {
-        // --- Start Automatic Repair Flow ---
-        try {
-          // Stage 1: Fast repair with pdf-lib
-          setRepairMessage('File seems non-standard. Attempting a quick repair...');
-          const repairedFile = await repairPdfWithPdfLib(file);
-          const responseData = await extractTransactionsFromApi(repairedFile, password);
-          setResult({ transactions: responseData, fileName: file.name });
-        } catch (repairErr1) {
-          try {
-            // Stage 2: Robust rebuild with pdf.js
-            setRepairMessage('Quick repair failed. Trying a deep scan and rebuild...');
-            const rebuiltFile = await rebuildPdfAsImagePdf(file);
-            const responseData = await extractTransactionsFromApi(rebuiltFile, password);
-            setResult({ transactions: responseData, fileName: file.name });
-          } catch (repairErr2) {
-            // Both repairs failed
-             setError("We tried two different repair methods, but the file appears to be too damaged to process. Please try creating a new copy using a 'Print to PDF' function.");
-          }
-        }
-      } else {
-        // Not a repairable error, show it directly
-        setError(errorMessage);
-      }
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
-      setRepairMessage(null);
     }
   };
 
@@ -323,7 +248,7 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
               <p className="text-lg font-semibold text-brand-dark mt-4">
-                {repairMessage || 'Processing document...'}
+                Processing document...
               </p>
               <p className="text-sm text-brand-gray">
                 This can take a moment for complex documents. Please keep this window open.
@@ -365,7 +290,7 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              {repairMessage ? 'Repairing...' : 'Converting...'}
+              Converting...
             </>
           ) : (
             'Convert to Excel'

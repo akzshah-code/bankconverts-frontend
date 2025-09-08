@@ -1,11 +1,11 @@
 const Footer = () => {
   const footerLinks = [
     { href: '#about', label: 'About' },
+    { href: '#blog', label: 'Blog' },
     { href: '#terms', label: 'Terms' },
     { href: '#privacy', label: 'Privacy' },
     { href: '#faq', label: 'FAQ' },
     { href: '#contact', label: 'Contact' },
-    { href: '#blog', label: 'Blog' },
   ];
 
   return (
