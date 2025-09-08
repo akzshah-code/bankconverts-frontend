@@ -1,3 +1,4 @@
+
 import { useState, FormEvent } from 'react';
 import { PDFDocument } from 'pdf-lib';
 
@@ -22,21 +23,21 @@ const UnlockPdf = ({ file, onUnlock, onCancel }: UnlockPdfProps) => {
 
     try {
       const fileBuffer = await file.arrayBuffer();
-      // FIX: The project's version of pdf-lib seems to have outdated TypeScript definitions
-      // that don't include the 'password' option. Casting to 'any' bypasses the incorrect
-      // compile-time error, allowing the valid runtime option to be used.
+      // Attempt to load with the provided password.
+      // FIX: Cast the options object to 'any' to bypass a TypeScript error where the 'password' property is not recognized. This is consistent with its usage in the backend.
       const pdfDoc = await PDFDocument.load(fileBuffer, { password: password } as any);
       const pdfBytes = await pdfDoc.save();
 
-      const unlockedFile = new File([pdfBytes as BlobPart], file.name, { type: 'application/pdf' });
+      const unlockedFile = new File([new Uint8Array(pdfBytes)], file.name, { type: 'application/pdf' });
 
       onUnlock(unlockedFile, password);
     } catch (err) {
       if (err instanceof Error && (err.message.toLowerCase().includes('password') || err.name === 'InvalidPasswordError')) {
         setError('Incorrect password. Please try again.');
       } else {
-        // Since server-side handles robust unlocking, just pass it through on client error.
-        console.warn("Client-side unlock failed, passing to server:", err);
+        // For other errors (e.g., corruption), let the server's more robust logic handle it.
+        // Pass the original file and password attempt to the main conversion flow.
+        console.warn("Client-side unlock failed, delegating to server-side logic:", err);
         onUnlock(file, password);
       }
     } finally {

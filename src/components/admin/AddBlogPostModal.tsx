@@ -1,5 +1,7 @@
+
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { BlogPost } from '../../lib/types';
+import RichTextEditor from '../shared/RichTextEditor';
 
 interface AddBlogPostModalProps {
   onSave: (post: Omit<BlogPost, 'id' | 'date'>) => void;
@@ -32,7 +34,7 @@ const AddBlogPostModal = ({ onSave, onClose }: AddBlogPostModalProps) => {
       title,
       author,
       excerpt,
-      content: content || excerpt, // Use content, or fallback to excerpt
+      content,
       featuredImage: featuredImage || undefined,
     });
   };
@@ -67,8 +69,8 @@ const AddBlogPostModal = ({ onSave, onClose }: AddBlogPostModalProps) => {
             <textarea name="excerpt" id="excerpt" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} rows={3} required placeholder="A short summary of the post..." className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-brand-blue focus:border-brand-blue"/>
           </div>
           <div>
-            <label htmlFor="content" className="block text-sm font-medium text-gray-700">Content</label>
-            <textarea name="content" id="content" value={content} onChange={(e) => setContent(e.target.value)} rows={8} required placeholder="The full content of the blog post..." className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-brand-blue focus:border-brand-blue"/>
+            <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+            <RichTextEditor value={content} onChange={setContent} />
           </div>
           <div className="flex justify-end space-x-3 pt-4">
             <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md font-semibold hover:bg-gray-300">Cancel</button>
