@@ -135,7 +135,11 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
         setResult({ transactions: responseData, fileName: file.name });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(errorMessage);
+      if (errorMessage.includes("PASSWORD_REQUIRED")) {
+          setLockedPdf(file); // Trigger the password modal
+      } else {
+          setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
