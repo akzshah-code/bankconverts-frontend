@@ -1,8 +1,10 @@
 
 
-import { useEffect } from 'react';
-import { ExtractedTransaction, ConversionHistoryItem } from '../lib/types';
+import { useEffect, useState } from 'react';
+import { ExtractedTransaction, ConversionHistoryItem, FinancialAnalysis } from '../lib/types';
 import { downloadTransactions } from '../lib/download';
+import { analyzeTransactions } from '../services/apiService';
+import FinancialAnalysisComponent from './FinancialAnalysis';
 
 interface ResultsViewProps {
   transactions: ExtractedTransaction[];
@@ -13,8 +15,11 @@ interface ResultsViewProps {
 
 const ResultsView = ({ transactions, fileName, onReset, onConversionComplete }: ResultsViewProps) => {
   const pagesUsed = Math.ceil(transactions.length / 25) || 1;
+  const [analysis, setAnalysis] = useState<FinancialAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
-  // When the component mounts with results, report the page usage.
+  // When the component mounts with results, report the page usage and trigger analysis.
   useEffect(() => {
     const newItem: ConversionHistoryItem = {
         id: `conv_${Date.now()}`,
@@ -25,6 +30,24 @@ const ResultsView = ({ transactions, fileName, onReset, onConversionComplete }: 
         transactions: transactions,
     };
     onConversionComplete([newItem]);
+
+    const performAnalysis = async () => {
+        if (transactions.length > 0) {
+            setIsAnalyzing(true);
+            setAnalysisError(null);
+            try {
+                const analysisResult = await analyzeTransactions(transactions);
+                setAnalysis(analysisResult);
+            } catch (error) {
+                console.error("Financial analysis failed:", error);
+                setAnalysisError(error instanceof Error ? error.message : "Could not generate insights.");
+            } finally {
+                setIsAnalyzing(false);
+            }
+        }
+    };
+
+    performAnalysis();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const debits = transactions.filter(t => t.debit != null && t.debit > 0);
@@ -103,6 +126,11 @@ const ResultsView = ({ transactions, fileName, onReset, onConversionComplete }: 
         </div>
       </div>
 
+      <FinancialAnalysisComponent
+        analysis={analysis}
+        isLoading={isAnalyzing}
+        error={analysisError}
+      />
 
       {/* Table Section */}
       <div className="border rounded-lg overflow-hidden mb-6">

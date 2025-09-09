@@ -91,3 +91,17 @@ export interface ConversionResult {
 // AuthUser is a simplified version of the main User type for prop drilling.
 // Let's use the main User type and ensure it has all required properties.
 export type AuthUser = User;
+
+// --- New Types for Financial Analysis Feature ---
+
+export interface FinancialAnalysis {
+  summary: string[];
+  spendingByCategory: {
+    category: string;
+    totalAmount: number;
+  }[];
+  recurringSubscriptions: {
+    name: string;
+    estimatedAmount: number;
+  }[];
+}

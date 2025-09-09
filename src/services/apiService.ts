@@ -1,4 +1,4 @@
-import { ExtractedTransaction } from "../lib/types";
+import { ExtractedTransaction, FinancialAnalysis } from "../lib/types";
 
 const getApiBaseUrl = (): string => {
     // In development mode, use the Vite proxy.
@@ -43,7 +43,7 @@ const handleResponseError = async (response: Response): Promise<Error> => {
 
 
 export const extractTransactionsFromApi = async (file: File, password: string | null): Promise<ExtractedTransaction[]> => {
-    if (!API_BASE_URL) {
+    if (!API_BASE_URL && import.meta.env.MODE !== 'development') {
         throw new Error("Configuration error: VITE_API_BASE_URL is not defined in the frontend environment. Please ensure it is set in your project's .dev.vars file for local development or in your Cloudflare Pages production environment variables.");
     }
 
@@ -70,6 +70,28 @@ export const extractTransactionsFromApi = async (file: File, password: string | 
     const responseData = await response.json();
     return responseData as ExtractedTransaction[];
 };
+
+export const analyzeTransactions = async (transactions: ExtractedTransaction[]): Promise<FinancialAnalysis> => {
+    if (!API_BASE_URL && import.meta.env.MODE !== 'development') {
+        throw new Error("Configuration error: VITE_API_BASE_URL is not defined.");
+    }
+     let response: Response;
+    try {
+        response = await fetch(`${API_BASE_URL}/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transactions }),
+        });
+    } catch (networkError) {
+        throw handleApiError(networkError);
+    }
+
+    if (!response.ok) {
+        throw await handleResponseError(response);
+    }
+    return response.json();
+};
+
 
 export const sendWelcomeEmail = async (name: string, email: string): Promise<void> => {
     if (!API_BASE_URL) return; // Fail silently for non-critical emails if config is missing
