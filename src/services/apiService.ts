@@ -72,6 +72,7 @@ export const extractTransactionsFromApi = async (file: File, password: string | 
 };
 
 export const sendWelcomeEmail = async (name: string, email: string): Promise<void> => {
+    if (!API_BASE_URL) return; // Fail silently for non-critical emails if config is missing
     await fetch(`${API_BASE_URL}/send-welcome-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,6 +81,7 @@ export const sendWelcomeEmail = async (name: string, email: string): Promise<voi
 };
 
 export const sendUpgradeEmail = async (name: string, email: string, planName: string): Promise<void> => {
+    if (!API_BASE_URL) return;
     await fetch(`${API_BASE_URL}/send-upgrade-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -96,6 +98,7 @@ interface InvoiceEmailPayload {
 }
 
 export const sendInvoiceEmail = async (payload: InvoiceEmailPayload): Promise<void> => {
+    if (!API_BASE_URL) return;
     await fetch(`${API_BASE_URL}/send-invoice-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
