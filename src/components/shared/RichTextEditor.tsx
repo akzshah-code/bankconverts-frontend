@@ -1,5 +1,7 @@
 
-import { useRef, type FC } from 'react';
+
+// FIX: Import React to provide the 'React' namespace for types like 'React.ReactNode'.
+import React, { useRef, type FC } from 'react';
 
 interface RichTextEditorProps {
   value: string;
