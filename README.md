@@ -76,57 +76,56 @@ c. **Set Production Environment Variables:**
 
 Follow these instructions in your separate, **private** `bankconverts-backend` repository.
 
-### Method 1: Cloudflare Dashboard Setup (Definitive Fix)
-
-This is the most reliable way to configure your worker and resolve all errors.
-
-#### Step 1: Initial Deployment
-
-First, deploy your worker from your command line. **This initial deployment will likely show an error, which is expected.** Its purpose is to create the worker in your Cloudflare account so you can configure it through the dashboard.
-
+### 1. Install Dependencies
 ```bash
-# Make sure you have installed dependencies first
 npm install
-
-# Now, run the deploy command. Ignore any errors for now.
-npm run deploy
 ```
 
-#### Step 2: Configure Settings in the Cloudflare Dashboard
+### 2. Configure Local API Key
+For local development, your worker needs the Gemini API key.
 
-Navigate to your worker in the Cloudflare dashboard to add the required settings.
+a. In the root of your `bankconverts-backend` project, create a file named `.dev.vars`.
+b. Add your key:
+```
+# .dev.vars (in backend project)
+API_KEY="PASTE_YOUR_GEMINI_API_KEY_HERE"
+```
+> **Note:** This file is for local development only and should be in your `.gitignore`.
 
-1.  In Cloudflare, go to **Workers & Pages** and select your `bankconverts-backend` worker.
-2.  Go to the **Settings** tab.
+### 3. Run Locally
+This starts your backend worker at `http://127.0.0.1:8787`.
+```bash
+npm run dev
+```
 
-#### Step 2a: Add the API Key Secret
+### 4. Configure for Deployment (`wrangler.toml`)
+Ensure your `wrangler.toml` file in the `bankconverts-backend` project looks like this. It is crucial that this file does **not** contain a `[vars]` section for the `API_KEY`.
 
-1.  On the **Settings** page, click on **Variables**.
-2.  Scroll down to **Secret variables** and click **Add variable**.
-3.  Fill in the fields:
-    -   **Variable name:** `API_KEY`
-    -   **Value:** Paste your Google Gemini API key here.
-4.  Click **Save**.
+```toml
+# bankconverts-backend/wrangler.toml
+name = "bankconverts-backend"
+main = "src/index.ts"
+compatibility_date = "2024-07-25"
+compatibility_flags = ["nodejs_compat"]
+```
 
-> **Note:** It is normal for the **Bindings** tab to be empty. Secrets are now handled under **Variables**.
+### 5. Deploy to Cloudflare
 
-#### Step 2b: Add the Compatibility Flag (Crucial for Fixing Errors)
+**Step 5a: Set the Production Secret (Run once)**
+This command securely stores your Gemini API key as an encrypted secret. This is what your deployed worker will use.
 
-1.  On the **Settings** page, click on **Runtime**.
-2.  Scroll down to **Compatibility Flags** and click **Add flag**.
-3.  A text box will appear. Type `nodejs_compat` into the box and press Enter.
-4.  Click **Save**.
+```bash
+npx wrangler secret put API_KEY
+```
+When prompted, paste your API key. This command creates the necessary binding in Cloudflare's system, which resolves the "No bindings found" error during deployment.
 
-#### Step 3: Redeploy to Apply Settings
+> [!TIP]
+> **Troubleshooting: "Binding name 'API_KEY' already in use"**
+> If you see this error, it means the secret has already been set successfully. You can safely skip this step and proceed directly to **Step 5b**.
 
-Your settings are saved, but you must redeploy the worker for them to take effect.
-
-1.  Go to the **Deployments** tab for your worker.
-2.  Click **Create a deployment**.
-3.  Drag and drop your `bankconverts-backend` project folder into the upload box, or simply run the command-line tool again:
-
+**Step 5b: Deploy the Worker**
+Now that the secret is set, you can deploy your worker.
 ```bash
 npm run deploy
 ```
-
-After redeploying with these settings, your backend will be fully configured and your application will work correctly.
+Wrangler will find the `API_KEY` secret and attach it to the worker. The deployment will now succeed, and your application will be fully functional.
