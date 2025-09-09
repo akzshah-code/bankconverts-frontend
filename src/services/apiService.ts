@@ -1,10 +1,10 @@
 import { ExtractedTransaction } from "../lib/types";
 
 const getApiBaseUrl = (): string => {
-    // In development mode, always default to the local backend server.
-    // This simplifies setup and prevents connection errors from a misconfigured .dev.vars file.
+    // In development mode, use the Vite proxy.
+    // All requests to /api will be forwarded to the backend.
     if (import.meta.env.MODE === 'development') {
-        return 'http://127.0.0.1:8787';
+        return '/api';
     }
     // In production, use the environment variable set by the deployment platform (e.g., Cloudflare Pages).
     return import.meta.env.VITE_API_BASE_URL;

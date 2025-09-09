@@ -21,6 +21,13 @@ export default defineConfig({
   server: {
     port: 5174,
     strictPort: true, // Exit if port is already in use
+    proxy: {
+      '/api': {
+        target: 'https://bankconverts-backend.iamshahkarimabdul.workers.dev',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
   },
   build: {
     outDir: 'dist',
