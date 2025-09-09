@@ -1,5 +1,3 @@
-
-
 import { useState, useRef, ChangeEvent, DragEvent, useEffect } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import { AuthUser, FileState, ConversionHistoryItem } from '../lib/types';
@@ -308,8 +306,8 @@ export const FileUpload = ({ user, onConversionComplete }: { user: AuthUser | nu
                                                 </div>
                                                 {f.status === 'processing' && <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2"><div className="bg-brand-blue h-1.5 rounded-full" style={{ width: `100%` }}></div></div>}
                                                 {f.error && (
-                                                    <div className="text-red-600 text-xs mt-1">
-                                                        <span>{f.error}</span>
+                                                    <div className="text-red-600 text-xs mt-1 text-left">
+                                                        <div dangerouslySetInnerHTML={{ __html: f.error }} />
                                                         {f.error.includes('Unsupported encryption') &&
                                                             <div>
                                                                 <button className="text-blue-600 hover:underline text-xs" onClick={() => toggleCliVisibility(f.id)}>
