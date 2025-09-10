@@ -1,5 +1,5 @@
 
-import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
+import { useState, useRef, DragEvent, ChangeEvent, useEffect, MouseEvent } from 'react';
 import { ExtractedTransaction, ConversionHistoryItem, User } from '../lib/types';
 import ResultsView from './ResultsView';
 import UnlockPdf from './UnlockPdf';
@@ -123,6 +123,27 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
     }
   };
 
+  const handleUseSample = async (event: MouseEvent) => {
+    event.stopPropagation(); // Prevent the dropzone's click handler
+    if (isLoading || isCheckingPdf || limitError) return;
+
+    try {
+      setIsLoading(true);
+      const response = await fetch('/sample-statement.txt');
+      if (!response.ok) throw new Error('Sample file could not be loaded.');
+      
+      const textContent = await response.text();
+      const sampleFile = new File([textContent], 'sample-statement.txt', { type: 'text/plain' });
+      await processSelectedFile(sampleFile);
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleConvert = async () => {
     if (!file || runUsageCheck()) return;
 
@@ -229,7 +250,16 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
             </svg>
           </div>
           <p className="text-lg font-semibold text-brand-dark">Drag & Drop Your Files Here</p>
-          <p className="text-sm text-brand-gray">or <span className="text-brand-blue font-medium">click to browse</span></p>
+          <p className="text-sm text-brand-gray">
+            or <span className="text-brand-blue font-medium">click to browse</span> or{' '}
+            <button
+              onClick={handleUseSample}
+              disabled={isLoading || isCheckingPdf}
+              className="text-brand-green font-medium underline hover:text-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+            >
+              use a sample
+            </button>
+          </p>
           <p className="text-xs text-brand-gray pt-2">Supported formats: PDF, JPG, PNG, TXT, CSV</p>
         </div>
       ) : null }

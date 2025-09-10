@@ -1,0 +1,34 @@
+Apex Financial Trust
+123 Banking Plaza, Finance City, FC 54321
+www.apexfinancialtrust.com
+
+Account Statement
+
+Customer Name: John Doe
+Address: 123 Main Street, Anytown, USA 12345
+Account Number: **** **** **** 1234
+Statement Period: 08/01/2024 - 08/31/2024
+
+---------------------------------------------------------------------------------------------------
+| Date         | Description                       | Debit        | Credit       | Balance      |
+---------------------------------------------------------------------------------------------------
+| 08/01/2024   | Opening Balance                   |              |              | 5,000.00     |
+| 08/02/2024   | DIRECT DEPOSIT - ACME CORP        |              | 2,500.00     | 7,500.00     |
+| 08/03/2024   | ONLINE PAYMENT - AMAZON MKTPLACE  | 150.75       |              | 7,349.25     |
+| 08/05/2024   | STARBUCKS #5821                   | 12.50        |              | 7,336.75     |
+| 08/08/2024   | ZELLE FROM JANE SMITH             |              | 100.00       | 7,436.75     |
+| 08/10/2024   | ATM WITHDRAWAL - 456 OAK AVE      | 200.00       |              | 7,236.75     |
+| 08/15/2024   | MORTGAGE PAYMENT - CITY BANK      | 1,800.00     |              | 5,436.75     |
+| 08/16/2024   | DIRECT DEPOSIT - ACME CORP        |              | 2,500.00     | 7,936.75     |
+| 08/20/2024   | UTILITY CO - POWER & LIGHT        | 85.40        |              | 7,851.35     |
+| 08/22/2024   | NETFLIX.COM                       | 15.99        |              | 7,835.36     |
+| 08/25/2024   | GROCERY MART                      | 210.30       |              | 7,625.06     |
+| 08/28/2024   | TRANSFER TO SAVINGS ACCT #5678    | 500.00       |              | 7,125.06     |
+| 08/31/2024   | INTEREST EARNED                   |              | 5.25         | 7,130.31     |
+---------------------------------------------------------------------------------------------------
+
+Summary:
+Beginning Balance: $5,000.00
+Total Deposits: $2,605.25
+Total Withdrawals: $2,975.04
+Ending Balance: $7,130.31

@@ -5,7 +5,7 @@ This project converts bank statements into structured data using a public React 
 ## Architecture Overview
 
 1.  **`bankconverts-frontend` (This Repository - Public):** A Vite-powered React application that provides the user interface. It is deployed as a **Cloudflare Pages** project.
-2.  **`bankconverts-backend` (Separate Private Repository):** A Cloudflare Worker that handles all secure logic, including file processing and communication with the Gemini API. It is deployed as a **Cloudflare Worker**.
+2.  **`bankconverts-backend` (Separate Private Repository):** A Cloudflare Worker that handles all secure logic, including file processing and communication with the Google Gemini API. It is deployed as a **Cloudflare Worker**.
 
 ---
 
@@ -14,7 +14,7 @@ This project converts bank statements into structured data using a public React 
 > [!IMPORTANT]
 > **CRITICAL ACTION REQUIRED: Delete the `/functions` Directory**
 >
-> Your project contains a `/functions` directory with outdated backend code. If this directory exists when you deploy to Cloudflare Pages, it will **override** the connection to your real backend worker and cause your application to **fail**.
+> Your project may contain a `/functions` directory with outdated backend code. If this directory exists when you deploy to Cloudflare Pages, it will **override** the connection to your real backend worker and cause your application to **fail**.
 >
 > **You must delete the entire `/functions` directory from this frontend project.**
 >
@@ -98,39 +98,49 @@ This starts your backend worker at `http://127.0.0.1:8787`.
 npm run dev
 ```
 
-### 4. Configure for Deployment (`wrangler.toml`)
-Ensure your `wrangler.toml` file in the `bankconverts-backend` project looks like this. It is crucial that this file does **not** contain a `[vars]` section for the `API_KEY`.
+### 4. Deploy to Cloudflare (Definitive Guide)
 
-```toml
-# bankconverts-backend/wrangler.toml
-name = "bankconverts-backend"
-main = "src/index.ts"
-compatibility_date = "2024-07-25"
-compatibility_flags = ["nodejs_compat"]
-preview_urls = true
-```
+**Step 4a: Clean Slate (CRITICAL FIRST STEP)**
 
-### 5. Deploy to Cloudflare
+> [!WARNING]
+> To avoid configuration conflicts, you **must** delete any existing backend workers from your Cloudflare account before proceeding.
+> 1. Go to your Cloudflare Dashboard -> **Workers & Pages**.
+> 2. Find and delete any workers named `bankconverts-backend` or `bankconverts-backend-production`.
+> 3. For each one, go to its **Settings -> General** tab and click the **Delete** button at the bottom.
 
-This is a two-step process. The first step only needs to be done once.
+**Step 4b: Set the Production Secret**
 
-**Step 5a: Set the Production Secret (CRITICAL FIRST STEP)**
-
-> [!IMPORTANT]
-> You **must** run this command before your first deployment. It securely stores your Gemini API key and creates the necessary "binding" in Cloudflare's system so the deployed worker can access it. Deploying without this step will cause the worker to crash.
+This command securely stores your Gemini API key in your Cloudflare account. It only needs to be run once.
 
 ```bash
 npx wrangler secret put API_KEY
 ```
 When prompted, paste your API key and press Enter.
 
-> **Troubleshooting:** If you see an error like "Binding name 'API_KEY' already in use," it means the secret has already been set successfully. You can safely skip this step and proceed directly to **Step 5b**.
+**Step 4c: Deploy the Worker**
 
-**Step 5b: Deploy the Worker**
-
-Now that the secret is set, you can deploy your worker.
+This command will create a new, clean instance of your worker.
 
 ```bash
 npm run deploy
 ```
-Wrangler will find the `API_KEY` secret you set in the previous step and attach it to the worker. The deployment will now succeed, and your application will be fully functional.
+
+**Step 4d: Verify Secret Binding in Cloudflare (FOOLPROOF FINAL STEP)**
+
+> [!CAUTION]
+> Your deployment is **NOT COMPLETE** until you perform this final check. A secret can exist in your account but still not be connected to the worker. This manual step guarantees the connection.
+
+1.  Go to your **Cloudflare Dashboard** -> **Workers & Pages**.
+2.  Click on your newly created `bankconverts-backend` worker.
+3.  In the worker's settings, click the **Settings** tab, and then click the **Bindings** sub-menu item.
+    > **Note:** Do not use the "Variables and Secrets" tab. You must use the **"Bindings"** tab for this step.
+4.  Look for the section titled **Worker Bindings**.
+5.  You **must** see a binding listed with the "Variable name" `API_KEY`.
+6.  **If the binding is missing (this is the source of the error):**
+    - Click **Add binding**.
+    - **Variable name:** `API_KEY`
+    - **Type:** `Secret`
+    - **Secret name:** Select `API_KEY` from the dropdown list of your available secrets.
+    - Click **Save**. This will trigger a new deployment with the correct settings.
+
+Your application will now be fully functional.
