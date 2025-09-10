@@ -28,6 +28,14 @@ const handleApiError = (networkError: unknown): Error => {
 };
 
 const handleResponseError = async (response: Response): Promise<Error> => {
+    // Check if the server sent a specific HTML error message (like our 503 key error)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+        const htmlError = await response.text();
+        return new Error(htmlError); // Return the HTML directly for rendering
+    }
+    
+    // Handle JSON errors as before
     let errorText = `Request failed with status ${response.status}`;
     const responseBody = await response.text();
     try {
