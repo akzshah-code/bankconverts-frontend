@@ -107,25 +107,30 @@ name = "bankconverts-backend"
 main = "src/index.ts"
 compatibility_date = "2024-07-25"
 compatibility_flags = ["nodejs_compat"]
+preview_urls = true
 ```
 
 ### 5. Deploy to Cloudflare
 
-**Step 5a: Set the Production Secret (Run once)**
-This command securely stores your Gemini API key as an encrypted secret. This is what your deployed worker will use.
+This is a two-step process. The first step only needs to be done once.
+
+**Step 5a: Set the Production Secret (CRITICAL FIRST STEP)**
+
+> [!IMPORTANT]
+> You **must** run this command before your first deployment. It securely stores your Gemini API key and creates the necessary "binding" in Cloudflare's system so the deployed worker can access it. Deploying without this step will cause the worker to crash.
 
 ```bash
 npx wrangler secret put API_KEY
 ```
-When prompted, paste your API key. This command creates the necessary binding in Cloudflare's system, which resolves the "No bindings found" error during deployment.
+When prompted, paste your API key and press Enter.
 
-> [!TIP]
-> **Troubleshooting: "Binding name 'API_KEY' already in use"**
-> If you see this error, it means the secret has already been set successfully. You can safely skip this step and proceed directly to **Step 5b**.
+> **Troubleshooting:** If you see an error like "Binding name 'API_KEY' already in use," it means the secret has already been set successfully. You can safely skip this step and proceed directly to **Step 5b**.
 
 **Step 5b: Deploy the Worker**
+
 Now that the secret is set, you can deploy your worker.
+
 ```bash
 npm run deploy
 ```
-Wrangler will find the `API_KEY` secret and attach it to the worker. The deployment will now succeed, and your application will be fully functional.
+Wrangler will find the `API_KEY` secret you set in the previous step and attach it to the worker. The deployment will now succeed, and your application will be fully functional.

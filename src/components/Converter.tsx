@@ -186,14 +186,15 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
   return (
     <div className="bg-white rounded-lg shadow-2xl p-8 max-w-lg mx-auto">
       {error && (
-        <div className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md" role="alert">
+        <div className="relative mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md" role="alert">
             <p className="font-bold">Conversion Failed</p>
             <div className="text-sm mt-2" dangerouslySetInnerHTML={{ __html: error }} />
             <button
-              onClick={() => resetState()}
-              className="mt-4 px-3 py-1.5 border border-red-300 text-sm font-semibold rounded-md text-red-700 bg-white hover:bg-red-50 transition-colors"
+                onClick={() => setError(null)}
+                className="absolute top-2 right-2 p-1 rounded-full hover:bg-red-200 transition-colors"
+                aria-label="Close error message"
             >
-              Try Again
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
       )}

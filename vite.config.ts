@@ -23,7 +23,7 @@ export default defineConfig({
     strictPort: true, // Exit if port is already in use
     proxy: {
       '/api': {
-        target: 'https://bankconverts-backend.iamshahkarimabdul.workers.dev',
+        target: 'http://127.0.0.1:8787',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
