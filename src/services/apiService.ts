@@ -13,19 +13,20 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
-const handleApiError = (networkError: unknown): Error => {
-    console.error("API call failed:", networkError);
+const handleApiError = (networkError: unknown, apiUrl: string): Error => {
+    console.error(`API call to ${apiUrl} failed:`, networkError);
     // This type of error often indicates a CORS problem or the backend server being down/misconfigured.
     return new Error(
-        `Could not connect to the backend service. This may be due to a network issue or a server configuration problem.<br/><br/>
+        `Could not connect to the backend service at the configured URL.<br/><br/>
+        <strong>Attempted URL:</strong> <code style="background: #fee2e2; padding: 2px 4px; border-radius: 3px; color: #991b1b;">${apiUrl || 'Not Defined'}</code>
+        <br/><br/>
         <strong>Most Common Causes:</strong>
         <ul class="list-disc list-inside mt-1 space-y-1">
-         <li><strong>Cloudflare Pages Conflict:</strong> If deploying on Cloudflare Pages, a leftover <code>/functions</code> directory in your frontend code will override the backend connection. <strong>You must delete this directory.</strong></li>
-         <li>The backend worker is not deployed or has crashed (e.g., due to a missing <strong>API_KEY</strong> secret).</li>
-         <li>The <strong>VITE_API_BASE_URL</strong> is incorrect in the frontend environment.</li>
-         <li>A Cross-Origin (CORS) issue.</li>
+         <li>The <strong>VITE_API_BASE_URL</strong> environment variable has a typo or is not set correctly in your Cloudflare Pages production settings.</li>
+         <li>The backend worker is not deployed or has crashed. Check its logs.</li>
+         <li>A Cross-Origin (CORS) issue. Ensure your backend allows requests from your frontend's domain.</li>
         </ul>
-        <br/>Please check your deployment settings, the browser's developer console, and backend logs for more details.`
+        <br/>Please verify your deployment settings.`
     );
 };
 
@@ -70,7 +71,7 @@ export const extractTransactionsFromApi = async (file: File, password: string | 
             body: formData,
         });
     } catch (networkError) {
-        throw handleApiError(networkError);
+        throw handleApiError(networkError, API_BASE_URL);
     }
 
     if (!response.ok) {
@@ -93,7 +94,7 @@ export const analyzeTransactions = async (transactions: ExtractedTransaction[]):
             body: JSON.stringify({ transactions }),
         });
     } catch (networkError) {
-        throw handleApiError(networkError);
+        throw handleApiError(networkError, API_BASE_URL);
     }
 
     if (!response.ok) {
@@ -105,20 +106,29 @@ export const analyzeTransactions = async (transactions: ExtractedTransaction[]):
 
 export const sendWelcomeEmail = async (name: string, email: string): Promise<void> => {
     if (!API_BASE_URL) return; // Fail silently for non-critical emails if config is missing
-    await fetch(`${API_BASE_URL}/send-welcome-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email }),
-    });
+    try {
+        await fetch(`${API_BASE_URL}/send-welcome-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email }),
+        });
+    } catch (e) {
+        // Log a more informative error, but don't bother the user.
+        console.error("Failed to send welcome email:", handleApiError(e, API_BASE_URL).message);
+    }
 };
 
 export const sendUpgradeEmail = async (name: string, email: string, planName: string): Promise<void> => {
     if (!API_BASE_URL) return;
-    await fetch(`${API_BASE_URL}/send-upgrade-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, planName }),
-    });
+    try {
+        await fetch(`${API_BASE_URL}/send-upgrade-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, planName }),
+        });
+    } catch (e) {
+        console.error("Failed to send upgrade email:", handleApiError(e, API_BASE_URL).message);
+    }
 };
 
 interface InvoiceEmailPayload {
@@ -131,9 +141,13 @@ interface InvoiceEmailPayload {
 
 export const sendInvoiceEmail = async (payload: InvoiceEmailPayload): Promise<void> => {
     if (!API_BASE_URL) return;
-    await fetch(`${API_BASE_URL}/send-invoice-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    });
+    try {
+        await fetch(`${API_BASE_URL}/send-invoice-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+    } catch (e) {
+        console.error("Failed to send invoice email:", handleApiError(e, API_BASE_URL).message);
+    }
 };

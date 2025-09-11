@@ -1,112 +1,74 @@
 import ExcelJS from 'exceljs';
+import { ExtractedTransaction } from './types';
 
-function generateQBO(transactions: any[]): string {
-    const bankId = "123456789";
-    const acctId = "987654321";
-    const acctType = "CHECKING";
-    const currency = "USD";
-  
-    const transactionEntries = transactions.map(t => `
-      <STMTTRN>
-        <TRNTYPE>${t.amount > 0 ? 'CREDIT' : 'DEBIT'}</TRNTYPE>
-        <DTPOSTED>${t.date.replace(/\//g, '')}120000</DTPOSTED>
-        <TRNAMT>${t.amount.toFixed(2)}</TRNAMT>
-        <FITID>${new Date(t.date).getTime()}${Math.random()}</FITID>
-        <NAME>${t.description.substring(0, 32)}</NAME>
-      </STMTTRN>`).join('');
-  
-    return `
-OFXHEADER:100
-DATA:OFXSGML
-VERSION:102
-SECURITY:NONE
-ENCODING:USASCII
-CHARSET:1252
+const downloadFile = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
 
-<OFX>
-  <SIGNONMSGSRSV1>
-    <SONRS>
-      <STATUS><CODE>0</CODE><SEVERITY>INFO</SEVERITY></STATUS>
-      <DTSERVER>${new Date().toISOString().replace(/[-:.]/g, "").substring(0, 14)}</DTSERVER>
-      <LANGUAGE>ENG</LANGUAGE>
-    </SONRS>
-  </SIGNONMSGSRSV1>
-  <BANKMSGSRSV1>
-    <STMTTRNRS>
-      <TRNUID>1</TRNUID>
-      <STATUS><CODE>0</CODE><SEVERITY>INFO</SEVERITY></STATUS>
-      <STMTRS>
-        <CURDEF>${currency}</CURDEF>
-        <BANKACCTFROM><BANKID>${bankId}</BANKID><ACCTID>${acctId}</ACCTID><ACCTTYPE>${acctType}</ACCTTYPE></BANKACCTFROM>
-        <BANKTRANLIST>
-          ${transactionEntries}
-        </BANKTRANLIST>
-      </STMTRS>
-    </STMTTRNRS>
-  </BANKMSGSRSV1>
-</OFX>
-  `.trim();
-}
-
-export async function downloadTransactions(transactions: any[], format: 'xlsx' | 'csv' | 'json' | 'qbo', fileName: string) {
-    if (!transactions || transactions.length === 0) {
+export const downloadTransactions = async (
+  transactions: ExtractedTransaction[],
+  format: 'xlsx' | 'csv' | 'json',
+  fileNamePrefix: string
+) => {
+    if (transactions.length === 0) {
         alert("No transactions to download.");
         return;
     }
 
-    let blob: Blob;
-    let fileExtension: string;
+    // Sanitize the prefix and remove the original extension to prevent double extensions (e.g., file.pdf.xlsx)
+    const sanitizedPrefix = fileNamePrefix.replace(/[^a-z0-9_.-]/gi, '_');
+    const lastDotIndex = sanitizedPrefix.lastIndexOf('.');
+    const baseName = (lastDotIndex > 0) ? sanitizedPrefix.substring(0, lastDotIndex) : sanitizedPrefix;
 
-    switch (format) {
-        case 'xlsx':
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Transactions');
-            
-            worksheet.columns = Object.keys(transactions[0]).map(key => ({
-                header: key.toUpperCase(),
-                key: key,
-                width: 20
-            }));
 
-            worksheet.addRows(transactions);
-            
-            const buffer = await workbook.xlsx.writeBuffer();
-            blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            fileExtension = 'xlsx';
-            break;
+    const dataForExport = transactions.map(t => ({
+      'Transaction Date': t.date,
+      'Description': t.description,
+      'Reference': t.reference,
+      'Value Date': t.valueDate,
+      'Debit': t.debit,
+      'Credit': t.credit,
+      'Balance': t.balance,
+      'Category': t.category,
+    }));
 
-        case 'csv':
-            const csvWorkbook = new ExcelJS.Workbook();
-            const csvWorksheet = csvWorkbook.addWorksheet('Transactions');
-            csvWorksheet.columns = Object.keys(transactions[0]).map(key => ({ header: key, key: key }));
-            csvWorksheet.addRows(transactions);
-
-            const csvBuffer = await csvWorkbook.csv.writeBuffer();
-            blob = new Blob([csvBuffer], { type: 'text/csv;charset=utf-8;' });
-            fileExtension = 'csv';
-            break;
-
-        case 'json':
-            blob = new Blob([JSON.stringify(transactions, null, 2)], { type: 'application/json' });
-            fileExtension = 'json';
-            break;
-            
-        case 'qbo':
-            const qboData = generateQBO(transactions);
-            blob = new Blob([qboData], { type: 'application/vnd.intu.qbo' });
-            fileExtension = 'qbo';
-            break;
-
-        default:
-            return;
+    if (format === 'json') {
+      const jsonStr = JSON.stringify(transactions, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      downloadFile(blob, `${baseName}.json`);
+      return;
     }
+    
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Transactions");
 
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${fileName}.${fileExtension}`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
+    worksheet.columns = [
+      { header: 'Transaction Date', key: 'Transaction Date', width: 15 },
+      { header: 'Description', key: 'Description', width: 50 },
+      { header: 'Reference', key: 'Reference', width: 20 },
+      { header: 'Value Date', key: 'Value Date', width: 15 },
+      { header: 'Debit', key: 'Debit', width: 15, style: { numFmt: '#,##0.00' } },
+      { header: 'Credit', key: 'Credit', width: 15, style: { numFmt: '#,##0.00' } },
+      { header: 'Balance', key: 'Balance', width: 15, style: { numFmt: '#,##0.00' } },
+      { header: 'Category', key: 'Category', width: 20 },
+    ];
+
+    worksheet.addRows(dataForExport);
+
+    if (format === 'xlsx') {
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        downloadFile(blob, `${baseName}.xlsx`);
+    } else if (format === 'csv') {
+        const buffer = await workbook.csv.writeBuffer();
+        const blob = new Blob([buffer], { type: 'text/csv;charset=utf-8;' });
+        downloadFile(blob, `${baseName}.csv`);
+    }
+};

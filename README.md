@@ -98,17 +98,11 @@ This starts your backend worker at `http://127.0.0.1:8787`.
 npm run dev
 ```
 
-### 4. Deploy to Cloudflare (Definitive Guide)
+### 4. Deploy to Cloudflare (Simplified & Reliable)
 
-**Step 4a: Clean Slate (CRITICAL FIRST STEP)**
+This two-step process is all you need to deploy. The new `wrangler.toml` file automatically handles the secret binding, preventing it from being accidentally removed.
 
-> [!WARNING]
-> To avoid configuration conflicts, you **must** delete any existing backend workers from your Cloudflare account before proceeding.
-> 1. Go to your Cloudflare Dashboard -> **Workers & Pages**.
-> 2. Find and delete any workers named `bankconverts-backend` or `bankconverts-backend-production`.
-> 3. For each one, go to its **Settings -> General** tab and click the **Delete** button at the bottom.
-
-**Step 4b: Set the Production Secret**
+**Step 4a: Set the Production Secret (One-Time Setup)**
 
 This command securely stores your Gemini API key in your Cloudflare account. It only needs to be run once.
 
@@ -117,30 +111,12 @@ npx wrangler secret put API_KEY
 ```
 When prompted, paste your API key and press Enter.
 
-**Step 4c: Deploy the Worker**
+**Step 4b: Deploy the Worker**
 
-This command will create a new, clean instance of your worker.
+This command will publish your worker to Cloudflare. Thanks to the `wrangler.toml` file, it will automatically connect the `API_KEY` secret every time.
 
 ```bash
 npm run deploy
 ```
 
-**Step 4d: Verify Secret Binding in Cloudflare (FOOLPROOF FINAL STEP)**
-
-> [!CAUTION]
-> Your deployment is **NOT COMPLETE** until you perform this final check. A secret can exist in your account but still not be connected to the worker. This manual step guarantees the connection.
-
-1.  Go to your **Cloudflare Dashboard** -> **Workers & Pages**.
-2.  Click on your newly created `bankconverts-backend` worker.
-3.  In the worker's settings, click the **Settings** tab, and then click the **Bindings** sub-menu item.
-    > **Note:** Do not use the "Variables and Secrets" tab. You must use the **"Bindings"** tab for this step.
-4.  Look for the section titled **Worker Bindings**.
-5.  You **must** see a binding listed with the "Variable name" `API_KEY`.
-6.  **If the binding is missing (this is the source of the error):**
-    - Click **Add binding**.
-    - **Variable name:** `API_KEY`
-    - **Type:** `Secret`
-    - **Secret name:** Select `API_KEY` from the dropdown list of your available secrets.
-    - Click **Save**. This will trigger a new deployment with the correct settings.
-
-Your application will now be fully functional.
+Your backend is now live and correctly configured. You no longer need to manually check or add bindings in the Cloudflare dashboard after deploying.
