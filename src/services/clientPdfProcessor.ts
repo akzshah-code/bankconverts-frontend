@@ -108,9 +108,9 @@ export async function extractTransactionsFromPdf(
   }
   
   // For debugging: This will show you the exact text being parsed.
-  // console.log("--- Full PDF Text ---");
-  // console.log(fullText);
-  // console.log("---------------------");
+     console.log("--- Full PDF Text ---");
+     console.log(fullText);
+     console.log("---------------------");
 
   for (const parser of parsers) {
     const transactions: ExtractedTransaction[] = [];
