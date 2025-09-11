@@ -66,6 +66,12 @@ export interface ConversionHistoryItem {
   transactions: ExtractedTransaction[];
 }
 
+export interface BatchResultSummary {
+  transactions: number;
+  pages: number;
+  fileCount: number;
+  successfulFiles: number;
+}
 
 // --- New Types for Bulk Upload Feature ---
 
