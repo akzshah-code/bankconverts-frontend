@@ -7,6 +7,7 @@ import { extractTransactionsFromApi } from '../services/apiService';
 import { checkUsageLimit } from '../lib/usage';
 import LimitReachedView from './LimitReachedView';
 import { PDFDocument } from 'pdf-lib';
+import DemoView from './DemoView';
 
 interface ConverterProps {
   onConversionComplete: (items: ConversionHistoryItem[]) => void;
@@ -23,6 +24,7 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ transactions: ExtractedTransaction[], fileName: string } | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const runUsageCheck = () => {
@@ -47,6 +49,7 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
     setIsLoading(false);
     setIsCheckingPdf(false);
     setResult(null);
+    setIsDemo(false);
   };
   
   const processSelectedFile = async (selectedFile: File | null) => {
@@ -123,25 +126,10 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
     }
   };
 
-  const handleUseSample = async (event: MouseEvent) => {
+  const handleUseSample = (event: MouseEvent) => {
     event.stopPropagation(); // Prevent the dropzone's click handler
     if (isLoading || isCheckingPdf || limitError) return;
-
-    try {
-      setIsLoading(true);
-      const response = await fetch('/sample-statement.txt');
-      if (!response.ok) throw new Error('Sample file could not be loaded.');
-      
-      const textContent = await response.text();
-      const sampleFile = new File([textContent], 'sample-statement.txt', { type: 'text/plain' });
-      await processSelectedFile(sampleFile);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    setIsDemo(true);
   };
 
   const handleConvert = async () => {
@@ -170,6 +158,10 @@ const Converter = ({ onConversionComplete, user }: ConverterProps) => {
   const dropzoneIdleClasses = "border-gray-300 bg-gray-50 hover:border-brand-blue cursor-pointer";
   const dropzoneDraggingClasses = "border-brand-blue bg-brand-blue-light";
   const dropzoneDisabledClasses = "border-gray-300 bg-gray-100 cursor-not-allowed";
+
+  if (isDemo) {
+    return <DemoView onExitDemo={resetState} />;
+  }
 
   if (limitError) {
     return (
