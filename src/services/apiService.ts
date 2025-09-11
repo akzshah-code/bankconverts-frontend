@@ -1,3 +1,4 @@
+
 import { ExtractedTransaction, FinancialAnalysis } from "../lib/types";
 
 const getApiBaseUrl = (): string => {
@@ -17,13 +18,14 @@ const handleApiError = (networkError: unknown): Error => {
     // This type of error often indicates a CORS problem or the backend server being down/misconfigured.
     return new Error(
         `Could not connect to the backend service. This may be due to a network issue or a server configuration problem.<br/><br/>
-        Common causes:
-        <ul class="list-disc list-inside mt-1">
+        <strong>Most Common Causes:</strong>
+        <ul class="list-disc list-inside mt-1 space-y-1">
+         <li><strong>Cloudflare Pages Conflict:</strong> If deploying on Cloudflare Pages, a leftover <code>/functions</code> directory in your frontend code will override the backend connection. <strong>You must delete this directory.</strong></li>
          <li>The backend worker is not deployed or has crashed (e.g., due to a missing <strong>API_KEY</strong> secret).</li>
          <li>The <strong>VITE_API_BASE_URL</strong> is incorrect in the frontend environment.</li>
          <li>A Cross-Origin (CORS) issue.</li>
         </ul>
-        <br/>Please check the browser's developer console and backend logs for more details.`
+        <br/>Please check your deployment settings, the browser's developer console, and backend logs for more details.`
     );
 };
 
