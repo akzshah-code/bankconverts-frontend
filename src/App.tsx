@@ -154,7 +154,11 @@ function App() {
       return;
     }
 
-    const planDetails = getPlanDetails(planName, billingCycle as 'monthly' | 'annual');
+    // When registering for a paid plan, create a 'Free' user first.
+    // The actual upgrade happens after successful payment.
+    const isPaidRegistration = planName !== 'Free';
+    const initialPlan: User['plan'] = 'Free';
+    const freePlanDetails = getPlanDetails(initialPlan);
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 7);
 
@@ -163,11 +167,11 @@ function App() {
       name: fullName,
       email: email,
       role: 'user',
-      plan: planName,
-      usage: { used: 0, total: planDetails.pages },
+      plan: initialPlan,
+      usage: { used: 0, total: freePlanDetails.pages },
       dailyUsage: { pagesUsed: 0, resetTimestamp: 0 },
-      planRenews: planName === 'Free' ? 'N/A' : (billingCycle === 'annual' ? '1 year from now' : '1 month from now'),
-      planExpires: planName === 'Free' ? expiryDate.toISOString() : undefined,
+      planRenews: 'N/A',
+      planExpires: expiryDate.toISOString(),
       conversionHistory: [],
     };
 
@@ -181,9 +185,11 @@ function App() {
     setAllUsers(prev => [...prev, newUser]);
     setUser(newUser);
     
-    if (planName !== 'Free') {
+    if (isPaidRegistration) {
+       // Redirect to payment, but the user state is safely 'Free' until payment succeeds.
        window.location.hash = `#pricing?autoPay=true&plan=${planName}&cycle=${billingCycle}`;
     } else {
+       // For free registration, go directly to the dashboard.
        window.location.hash = '#dashboard';
     }
   };

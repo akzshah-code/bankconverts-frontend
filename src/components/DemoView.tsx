@@ -1,11 +1,5 @@
 import { demoTransactions } from '../lib/demo-data';
-
-const StatCard = ({ title, value }: { title: string; value: string | number }) => (
-  <div className="bg-white p-4 rounded-lg shadow-md flex-grow text-center border border-gray-100">
-    <p className="text-sm text-brand-gray">{title}</p>
-    <p className="text-2xl font-bold text-brand-blue">{value}</p>
-  </div>
-);
+import { StatCard } from './shared/StatCard';
 
 const DemoView = ({ onExitDemo }: { onExitDemo: () => void }) => {
   
@@ -36,19 +30,19 @@ const DemoView = ({ onExitDemo }: { onExitDemo: () => void }) => {
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-2xl p-6 max-w-lg mx-auto text-center">
+    <div className="bg-white rounded-lg shadow-2xl p-8 max-w-4xl mx-auto w-full text-center animate-fade-in">
       <h2 className="text-2xl font-bold text-brand-dark mb-4">Demo Ready!</h2>
       
       {/* Stats Section */}
       <div className="flex justify-center items-stretch gap-4 mb-6">
-        <StatCard title="Transactions" value={demoTransactions.length} />
-        <StatCard title="Pages Analyzed" value={2} />
-        <StatCard title="Processing Time" value="3.5s" />
+        <StatCard title="Transactions" value={demoTransactions.length} align="center" />
+        <StatCard title="Pages Analyzed" value={2} align="center" />
+        <StatCard title="Processing Time" value="3.5s" align="center" />
       </div>
 
       {/* Table Section */}
-      <div className="border rounded-lg overflow-hidden">
-        <div className="overflow-y-auto max-h-64">
+      <div className="border rounded-lg overflow-hidden mb-6">
+        <div className="overflow-y-auto max-h-96">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-gray-50 sticky top-0">
               <tr>
