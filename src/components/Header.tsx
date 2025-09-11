@@ -4,6 +4,7 @@ import { User } from '../lib/types';
 interface HeaderProps {
   user: User | null;
   onLogout: () => void;
+  backendStatus: 'checking' | 'ok' | 'error';
 }
 
 interface NavLink {
@@ -12,7 +13,23 @@ interface NavLink {
   isHighlighted?: boolean;
 }
 
-const Header = ({ user, onLogout }: HeaderProps) => {
+const ConnectionStatusIndicator = ({ status }: { status: 'checking' | 'ok' | 'error' }) => {
+    const statusMap = {
+        checking: { color: 'bg-gray-400 animate-pulse', title: 'Checking backend connection...' },
+        ok: { color: 'bg-green-500', title: 'Backend connection established' },
+        error: { color: 'bg-red-500 animate-pulse', title: 'Could not connect to the backend service. Check environment variables.' },
+    };
+    const currentStatus = statusMap[status];
+
+    return (
+        <div title={currentStatus.title}>
+            <div className={`h-3 w-3 rounded-full ${currentStatus.color}`}></div>
+        </div>
+    );
+};
+
+
+const Header = ({ user, onLogout, backendStatus }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const guestLinks: NavLink[] = [
@@ -72,7 +89,8 @@ const Header = ({ user, onLogout }: HeaderProps) => {
             </nav>
             
             {/* Primary Action Button */}
-            <div>
+            <div className="flex items-center space-x-4">
+               <ConnectionStatusIndicator status={backendStatus} />
               {user ? (
                  <button onClick={onLogout} className="bg-brand-dark text-white px-4 py-2 rounded-md font-semibold hover:bg-brand-dark/90 transition-colors duration-200">
                   Logout

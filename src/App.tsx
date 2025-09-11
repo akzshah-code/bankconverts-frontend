@@ -6,7 +6,7 @@ import { users as initialUsers, blogPosts as initialBlogPosts, emailTemplates as
 import { getPlanDetails } from './lib/plans';
 import { generateInvoicePdfAsBase64 } from './lib/invoice';
 import { pricingData } from './components/Pricing';
-import { sendWelcomeEmail, sendUpgradeEmail, sendInvoiceEmail } from './services/apiService';
+import { sendWelcomeEmail, sendUpgradeEmail, sendInvoiceEmail, checkBackendStatus } from './services/apiService';
 
 
 // --- Lazy-loaded Page Components ---
@@ -37,6 +37,7 @@ const LoadingFallback = () => (
 
 function App() {
   const [route, setRoute] = useState(window.location.hash);
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   
   const [user, setUser] = useState<User | null>(() => {
     try {
@@ -85,6 +86,16 @@ function App() {
       window.removeEventListener('hashchange', handleHashChange);
     };
   }, []);
+
+  // Proactive backend health check on initial app load.
+  useEffect(() => {
+    const verifyConnection = async () => {
+      const isConnected = await checkBackendStatus();
+      setBackendStatus(isConnected ? 'ok' : 'error');
+    };
+    verifyConnection();
+  }, []);
+
 
   // Persist the currently logged-in user's session.
   useEffect(() => {
@@ -296,34 +307,34 @@ function App() {
     
     if (route.startsWith('#blog/')) {
       const postId = route.split('/')[1];
-      return <BlogPostPage posts={allPosts} postId={postId} user={user} onLogout={handleLogout} />;
+      return <BlogPostPage posts={allPosts} postId={postId} user={user} onLogout={handleLogout} backendStatus={backendStatus} />;
     }
 
     const currentRoute = route.split('?')[0];
 
     switch (currentRoute) {
       case '#pricing':
-        return <PricingPage user={user} onLogout={handleLogout} onPaymentSuccess={handlePaymentSuccess} />;
+        return <PricingPage user={user} onLogout={handleLogout} onPaymentSuccess={handlePaymentSuccess} backendStatus={backendStatus} />;
       case '#faq':
-        return <FaqPage user={user} onLogout={handleLogout} />;
+        return <FaqPage user={user} onLogout={handleLogout} backendStatus={backendStatus} />;
       case '#terms':
-        return <TermsPage user={user} onLogout={handleLogout} />;
+        return <TermsPage user={user} onLogout={handleLogout} backendStatus={backendStatus} />;
       case '#privacy':
-        return <PrivacyPolicyPage user={user} onLogout={handleLogout} />;
+        return <PrivacyPolicyPage user={user} onLogout={handleLogout} backendStatus={backendStatus} />;
       case '#about':
-        return <AboutPage user={user} onLogout={handleLogout} />;
+        return <AboutPage user={user} onLogout={handleLogout} backendStatus={backendStatus} />;
       case '#contact':
-        return <ContactPage user={user} onLogout={handleLogout} />;
+        return <ContactPage user={user} onLogout={handleLogout} backendStatus={backendStatus} />;
       case '#login':
-        return <LoginPage onLogin={handleLogin} />;
+        return <LoginPage onLogin={handleLogin} backendStatus={backendStatus} />;
       case '#register':
-        return <RegisterPage onRegister={handleRegister} />;
+        return <RegisterPage onRegister={handleRegister} backendStatus={backendStatus} />;
       case '#dashboard':
-        return <DashboardPage user={user} onLogout={handleLogout} />;
+        return <DashboardPage user={user} onLogout={handleLogout} backendStatus={backendStatus} />;
       case '#bulk-convert':
-        return <BulkConvertPage user={user} onLogout={handleLogout} onConversionComplete={handleConversionComplete} />;
+        return <BulkConvertPage user={user} onLogout={handleLogout} onConversionComplete={handleConversionComplete} backendStatus={backendStatus} />;
       case '#blog':
-        return <BlogPage posts={allPosts} user={user} onLogout={handleLogout} />;
+        return <BlogPage posts={allPosts} user={user} onLogout={handleLogout} backendStatus={backendStatus} />;
       case '#admin':
         return (
           <AdminPage
@@ -337,10 +348,11 @@ function App() {
             setPosts={setAllPosts}
             setTemplates={setAllTemplates}
             setRoutes={setAllRoutes}
+            backendStatus={backendStatus}
           />
         );
       default:
-        return <LandingPage user={user} onLogout={handleLogout} onConversionComplete={handleConversionComplete} />;
+        return <LandingPage user={user} onLogout={handleLogout} onConversionComplete={handleConversionComplete} backendStatus={backendStatus} />;
     }
   };
 

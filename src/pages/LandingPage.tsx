@@ -14,9 +14,10 @@ interface LandingPageProps {
   user: User | null;
   onLogout: () => void;
   onConversionComplete: (items: ConversionHistoryItem[]) => void;
+  backendStatus: 'checking' | 'ok' | 'error';
 }
 
-const LandingPage = ({ user, onLogout, onConversionComplete }: LandingPageProps) => {
+const LandingPage = ({ user, onLogout, onConversionComplete, backendStatus }: LandingPageProps) => {
   const handleLandingConversion = (items: ConversionHistoryItem[]) => {
     if (!user) {
       const totalPages = items.reduce((sum, item) => sum + item.pagesUsed, 0);
@@ -28,7 +29,7 @@ const LandingPage = ({ user, onLogout, onConversionComplete }: LandingPageProps)
   
   return (
     <div className="flex flex-col min-h-screen">
-      <Header user={user} onLogout={onLogout} />
+      <Header user={user} onLogout={onLogout} backendStatus={backendStatus} />
       <main className="flex-grow">
         <Hero onConversionComplete={handleLandingConversion} user={user} />
         <Features />

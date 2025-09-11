@@ -8,14 +8,15 @@ interface BlogPostPageProps {
   postId: string;
   user: User | null;
   onLogout: () => void;
+  backendStatus: 'checking' | 'ok' | 'error';
 }
 
-const BlogPostPage = ({ posts, postId, user, onLogout }: BlogPostPageProps) => {
+const BlogPostPage = ({ posts, postId, user, onLogout, backendStatus }: BlogPostPageProps) => {
   const post = posts.find(p => p.id === postId);
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      <Header user={user} onLogout={onLogout} />
+      <Header user={user} onLogout={onLogout} backendStatus={backendStatus} />
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {post ? (
           <article className="max-w-3xl mx-auto">

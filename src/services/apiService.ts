@@ -52,6 +52,21 @@ const handleResponseError = async (response: Response): Promise<Error> => {
     return new Error(errorText);
 };
 
+export const checkBackendStatus = async (): Promise<boolean> => {
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl && import.meta.env.MODE !== 'development') {
+        console.error("VITE_API_BASE_URL is not defined.");
+        return false;
+    }
+    try {
+        const response = await fetch(`${baseUrl}/health`);
+        return response.ok;
+    } catch (error) {
+        console.error("Backend health check failed:", error);
+        return false;
+    }
+};
+
 
 export const extractTransactionsFromApi = async (file: File, password: string | null): Promise<ExtractedTransaction[]> => {
     if (!API_BASE_URL && import.meta.env.MODE !== 'development') {

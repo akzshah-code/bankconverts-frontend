@@ -9,12 +9,13 @@ interface BulkConvertPageProps {
   user: User | null;
   onLogout: () => void;
   onConversionComplete: (items: ConversionHistoryItem[]) => void;
+  backendStatus: 'checking' | 'ok' | 'error';
 }
 
-const BulkConvertPage = ({ user, onLogout, onConversionComplete }: BulkConvertPageProps) => {
+const BulkConvertPage = ({ user, onLogout, onConversionComplete, backendStatus }: BulkConvertPageProps) => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header user={user} onLogout={onLogout} />
+      <Header user={user} onLogout={onLogout} backendStatus={backendStatus} />
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-10">
             <h1 className="text-4xl font-bold text-brand-dark">Bulk Statement Converter</h1>

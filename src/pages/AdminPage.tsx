@@ -16,12 +16,13 @@ interface AdminPageProps {
   setPosts: Dispatch<SetStateAction<BlogPost[]>>;
   setTemplates: Dispatch<SetStateAction<EmailTemplate[]>>;
   setRoutes: Dispatch<SetStateAction<EmailRoute[]>>;
+  backendStatus: 'checking' | 'ok' | 'error';
 }
 
-const AdminPage = ({ user, onLogout, users, posts, templates, routes, setUsers, setPosts, setTemplates, setRoutes }: AdminPageProps) => {
+const AdminPage = ({ user, onLogout, users, posts, templates, routes, setUsers, setPosts, setTemplates, setRoutes, backendStatus }: AdminPageProps) => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header user={user} onLogout={onLogout} />
+      <Header user={user} onLogout={onLogout} backendStatus={backendStatus} />
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <AdminDashboard 
           user={user}

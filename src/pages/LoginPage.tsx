@@ -5,12 +5,13 @@ import Footer from '../components/Footer';
 
 interface LoginPageProps {
   onLogin: (email: string) => void;
+  backendStatus: 'checking' | 'ok' | 'error';
 }
 
-const LoginPage: FC<LoginPageProps> = ({ onLogin }) => {
+const LoginPage: FC<LoginPageProps> = ({ onLogin, backendStatus }) => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header user={null} onLogout={() => {}} />
+      <Header user={null} onLogout={() => {}} backendStatus={backendStatus} />
       <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <Login onLogin={onLogin} />
       </main>

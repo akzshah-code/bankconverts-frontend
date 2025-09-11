@@ -6,12 +6,13 @@ import { User } from '../lib/types';
 interface ContactPageProps {
   user: User | null;
   onLogout: () => void;
+  backendStatus: 'checking' | 'ok' | 'error';
 }
 
-const ContactPage = ({ user, onLogout }: ContactPageProps) => {
+const ContactPage = ({ user, onLogout, backendStatus }: ContactPageProps) => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header user={user} onLogout={onLogout} />
+      <Header user={user} onLogout={onLogout} backendStatus={backendStatus} />
       <main className="flex-grow">
         <Contact />
       </main>

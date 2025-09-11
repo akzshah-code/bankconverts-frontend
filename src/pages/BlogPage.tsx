@@ -8,6 +8,7 @@ interface BlogPageProps {
   posts: BlogPost[];
   user: User | null;
   onLogout: () => void;
+  backendStatus: 'checking' | 'ok' | 'error';
 }
 
 const BlogPostCard: FC<{ post: BlogPost }> = ({ post }) => (
@@ -30,10 +31,10 @@ const BlogPostCard: FC<{ post: BlogPost }> = ({ post }) => (
   </a>
 );
 
-const BlogPage = ({ posts, user, onLogout }: BlogPageProps) => {
+const BlogPage = ({ posts, user, onLogout, backendStatus }: BlogPageProps) => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <Header user={user} onLogout={onLogout} />
+      <Header user={user} onLogout={onLogout} backendStatus={backendStatus} />
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-brand-dark">Our Blog</h1>
