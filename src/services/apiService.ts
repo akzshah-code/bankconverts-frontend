@@ -15,20 +15,49 @@ const API_BASE_URL = getApiBaseUrl();
 
 const handleApiError = (networkError: unknown, apiUrl: string): Error => {
     console.error(`API call to ${apiUrl} failed:`, networkError);
-    // This type of error often indicates a CORS problem or the backend server being down/misconfigured.
+
+    let urlMismatchDetails = `<li><strong>URL Mismatch:</strong> The <code>VITE_API_BASE_URL</code> environment variable has a typo or is not set correctly in your Cloudflare Pages production settings.</li>`;
+
+    try {
+        if (apiUrl && new URL(apiUrl).hostname.endsWith('.workers.dev') && !apiUrl.includes('-production.')) {
+            const url = new URL(apiUrl);
+            const hostnameParts = url.hostname.split('.');
+            hostnameParts[0] = `${hostnameParts[0]}-production`;
+            const suggestedUrl = `https://${hostnameParts.join('.')}`;
+
+            urlMismatchDetails = `
+            <li>
+                <strong style="color: #c2410c;">Potential URL Mismatch Detected.</strong> The configured URL seems to be missing the <code>-production</code> suffix.
+                <br/>
+                <strong>Suggested URL:</strong> <code style="background: #dcfce7; padding: 2px 4px; border-radius: 3px; color: #166534; word-break: break-all;">${suggestedUrl}</code>
+                <br/>
+                <strong>Action:</strong> In your Cloudflare Pages settings, update the <code>VITE_API_BASE_URL</code> variable to match the suggested URL.
+            </li>`;
+        }
+    } catch (e) {
+        // Could not parse URL, use default message.
+    }
+
     return new Error(
         `Could not connect to the backend service at the configured URL.<br/><br/>
         <strong>Attempted URL:</strong> <code style="background: #fee2e2; padding: 2px 4px; border-radius: 3px; color: #991b1b;">${apiUrl || 'Not Defined'}</code>
         <br/><br/>
         <strong>Most Common Causes:</strong>
         <ul class="list-disc list-inside mt-1 space-y-1">
-         <li>The <strong>VITE_API_BASE_URL</strong> environment variable has a typo or is not set correctly in your Cloudflare Pages production settings.</li>
-         <li>The backend worker is not deployed or has crashed. Check its logs.</li>
-         <li>A Cross-Origin (CORS) issue. Ensure your backend allows requests from your frontend's domain.</li>
+            ${urlMismatchDetails}
+            <li>
+                <strong>Missing Backend Secret:</strong> The backend worker is crashing because its required <code>API_KEY</code> is not connected.
+                <br/>
+                <strong>Action:</strong> Check the 'Bindings' for your worker in the Cloudflare dashboard.
+            </li>
+            <li>
+                <strong>A Cross-Origin (CORS) issue.</strong> Ensure your backend allows requests from your frontend's domain.
+            </li>
         </ul>
         <br/>Please verify your deployment settings.`
     );
 };
+
 
 const handleResponseError = async (response: Response): Promise<Error> => {
     // Check if the server sent a specific HTML error message (like our 503 key error)

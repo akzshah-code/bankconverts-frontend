@@ -11,15 +11,6 @@ This project converts bank statements into structured data using a public React 
 
 ## Frontend Setup (`bankconverts-frontend`)
 
-> [!IMPORTANT]
-> **CRITICAL ACTION REQUIRED: Delete the `/functions` Directory**
->
-> Your project may contain a `/functions` directory with outdated backend code. If this directory exists when you deploy to Cloudflare Pages, it will **override** the connection to your real backend worker and cause your application to **fail**.
->
-> **You must delete the entire `/functions` directory from this frontend project.**
->
-> This is the most common cause of deployment issues.
-
 ### 1. Install Dependencies
 
 ```bash
@@ -67,7 +58,7 @@ b. **Configure Build Settings:**
 c. **Set Production Environment Variables:**
    - Go to your Pages project **Settings > Environment variables**.
    - Add the following variables for the **Production** environment:
-     - `VITE_API_BASE_URL`: `https://your-worker-name.your-subdomain.workers.dev` (replace with your actual worker URL)
+     - `VITE_API_BASE_URL`: The full URL of your deployed production worker (e.g., `https://bankconverts-backend-production.your-subdomain.workers.dev`).
      - `VITE_RAZORPAY_KEY_ID`: Your production Razorpay Key ID.
 
 ---
@@ -76,33 +67,32 @@ c. **Set Production Environment Variables:**
 
 Follow these instructions in your separate, **private** `bankconverts-backend` repository.
 
-### 1. Install Dependencies
+### 1. Install & Configure
+
 ```bash
+# Install dependencies
 npm install
+
+# Create local environment file
+touch .dev.vars
+
+# Add your Gemini API key to .dev.vars for local development
+echo 'API_KEY="PASTE_YOUR_GEMINI_API_KEY_HERE"' >> .dev.vars
 ```
 
-### 2. Configure Local API Key
-For local development, your worker needs the Gemini API key.
+### 2. Run Locally
 
-a. In the root of your `bankconverts-backend` project, create a file named `.dev.vars`.
-b. Add your key:
-```
-# .dev.vars (in backend project)
-API_KEY="PASTE_YOUR_GEMINI_API_KEY_HERE"
-```
-> **Note:** This file is for local development only and should be in your `.gitignore`.
-
-### 3. Run Locally
 This starts your backend worker at `http://127.0.0.1:8787`.
+
 ```bash
 npm run dev
 ```
 
-### 4. Deploy to Cloudflare (Simplified & Reliable)
+### 3. Deploy to Cloudflare
 
-This two-step process is all you need to deploy. The new `wrangler.toml` file automatically handles the secret binding, preventing it from being accidentally removed.
+This two-step process is all you need to deploy. The `wrangler.toml` file automatically handles the secret binding.
 
-**Step 4a: Set the Production Secret (One-Time Setup)**
+**Step 3a: Set the Production Secret (One-Time Setup)**
 
 This command securely stores your Gemini API key in your Cloudflare account. It only needs to be run once.
 
@@ -111,12 +101,38 @@ npx wrangler secret put API_KEY
 ```
 When prompted, paste your API key and press Enter.
 
-**Step 4b: Deploy the Worker**
+**Step 3b: Deploy the Worker**
 
-This command will publish your worker to Cloudflare. Thanks to the `wrangler.toml` file, it will automatically connect the `API_KEY` secret every time.
+This command publishes your worker to Cloudflare. It will automatically connect the `API_KEY` secret every time.
 
 ```bash
 npm run deploy
 ```
 
-Your backend is now live and correctly configured. You no longer need to manually check or add bindings in the Cloudflare dashboard after deploying.
+---
+
+## 🚨 Troubleshooting: "Conversion Failed" Error
+
+If you see a **"Could not connect to the backend service"** error on your live site, it is almost always caused by one of these two issues:
+
+### 1. Incorrect Frontend URL
+
+The `VITE_API_BASE_URL` in your Cloudflare Pages settings does not exactly match your deployed backend worker's URL.
+
+-   **Check:** Your `npm run deploy` command creates a worker named `bankconverts-backend-production`.
+-   **The URL is:** `https://bankconverts-backend-production.your-subdomain.workers.dev`
+-   **Fix:** Copy this exact URL and paste it into the `VITE_API_BASE_URL` variable in your **Pages project's production environment settings**.
+
+### 2. Missing Backend Secret
+
+Your `bankconverts-backend-production` worker is crashing because it cannot find the `API_KEY` secret.
+
+-   **Check:** In the Cloudflare dashboard, go to your `bankconverts-backend-production` worker and look under **Settings > Bindings**. It **MUST** show a "Secrets Store" binding for `API_KEY`.
+-   **Fix:** The secret may not have been created yet. Run this command in your backend project **once**:
+    ```bash
+    npx wrangler secret put API_KEY
+    ```
+    Then, redeploy the backend to apply the binding:
+    ```bash
+    npm run deploy
+    ```
