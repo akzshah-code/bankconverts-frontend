@@ -70,7 +70,7 @@ function App() {
   return (
     <div className="container">
       <header>
-        <h1>Trans Statements. Unlock Data.</h1>
+        <h1>Transfer Statements. Unlock Data.</h1>
         <p>The fastest and most accurate way to convert bank statements to Excel.</p>
       </header>
 
