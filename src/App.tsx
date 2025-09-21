@@ -1,18 +1,24 @@
-// Example: src/App.tsx
+// src/App.tsx
 
 import React, { useState } from 'react';
+import './App.css'; 
+
+// You can remove the FileUploader import if you are not using it yet
+// import FileUploader from './components/FileUploader';
 
 function App() {
+  // --- State variables MUST be inside the component ---
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [password, setPassword] = useState('');
 
+  // --- Event handler for file input change ---
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      // Store all selected files in an array
       setSelectedFiles(Array.from(event.target.files));
     }
   };
 
+  // --- Upload logic function, also inside the component ---
   const handleUpload = async () => {
     if (selectedFiles.length === 0) {
       alert("Please select files to upload.");
@@ -20,37 +26,46 @@ function App() {
     }
 
     const formData = new FormData();
-    // Append each file to the FormData object
-    selectedFiles.forEach(file => {
-      formData.append('files', file); // Use 'files' as the key
+    // Add explicit type 'File' to the parameter to fix the 'any' type error
+    selectedFiles.forEach((file: File) => {
+      formData.append('files', file);
     });
-
-    // You can also append other data, like passwords
     formData.append('password', password);
 
-    // Send the request to your backend
-    const response = await fetch('/api/convert', { // Your backend API endpoint
-      method: 'POST',
-      body: formData,
-    });
+    try {
+      const response = await fetch('/api/convert', {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (response.ok) {
-      // Handle the successful response, e.g., trigger a download
-      alert('Files converted successfully!');
-    } else {
-      alert('File conversion failed.');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'File conversion failed.');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'converted_statements.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      
+    } catch (error: any) {
+      alert(`Error: ${error.message}`);
     }
   };
 
+  // --- JSX to render the UI ---
   return (
-    <div>
+    <div className="App">
       <h1>Welcome to BankConverts.com</h1>
       <p>Your reliable bank statement conversion tool.</p>
-      
-      {/* Add 'multiple' to the input element */}
+
+      {/* The input now correctly calls handleFileChange */}
       <input type="file" multiple onChange={handleFileChange} />
 
-      {/* Optional: Display the number of selected files */}
       {selectedFiles.length > 0 && (
         <p>{selectedFiles.length} file(s) selected</p>
       )}
@@ -62,6 +77,7 @@ function App() {
         onChange={(e) => setPassword(e.target.value)} 
       />
       
+      {/* The button now correctly calls handleUpload */}
       <button onClick={handleUpload}>Upload and Convert</button>
     </div>
   );
