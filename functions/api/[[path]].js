@@ -1,4 +1,4 @@
-// In functions/api/onRequestPost.js
+// In functions/api/[[path]].js
 
 export async function onRequestPost(context) {
   // 1. Get the backend URL from the environment variable binding.
