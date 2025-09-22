@@ -1,21 +1,22 @@
 // In functions/api/[[path]].js
 
-export async function onRequestPost(context) {
-  // 1. Get the backend URL from the environment variable binding.
+export async function onRequest(context) {
+  // Get the backend URL from the environment variable.
   const backendUrlHost = context.env.BACKEND_SERVICE_URL;
 
-  // 2. Check if the variable is set.
+  // Check if the variable is configured in your Cloudflare Pages settings.
   if (!backendUrlHost) {
-    return new Response("Backend service URL is not configured in Cloudflare Pages settings.", { status: 500 });
+    return new Response("Backend service URL not configured.", { status: 500 });
   }
 
-  // 3. Construct the full URL to forward the request to.
-  let url = new URL(context.request.url);
-  let backendUrl = `${backendUrlHost}${url.pathname}${url.search}`;
+  // Reconstruct the full backend URL.
+  const url = new URL(context.request.url);
+  const backendUrl = `${backendUrlHost}${url.pathname}${url.search}`;
 
-  // 4. Create a new request object to forward to the backend.
+  // Create a new request to forward to the backend,
+  // preserving the original method, headers, and body.
   const backendRequest = new Request(backendUrl, context.request);
   
-  // 5. Forward the request and return the backend's response directly.
+  // Forward the request and return the backend's response.
   return fetch(backendRequest);
 }
