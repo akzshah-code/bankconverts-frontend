@@ -1,4 +1,4 @@
-// In functions/api/[[path]].js
+// In functions/api/onRequestPost.js
 
 export async function onRequestPost(context) {
     // Your backend URL
