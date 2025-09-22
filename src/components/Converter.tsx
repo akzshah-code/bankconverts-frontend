@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 // Make sure your CSS import path is correct
-import './Converter.css'; 
+import './Converter.css'; //the missing file
 
 function Converter() {
   const [file, setFile] = useState<File | null>(null);
