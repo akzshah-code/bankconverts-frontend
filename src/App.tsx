@@ -24,25 +24,27 @@ function App() {
       alert("Please select files to upload.");
       return;
     }
-
+  
     const formData = new FormData();
-    // Add explicit type 'File' to the parameter to fix the 'any' type error
     selectedFiles.forEach((file: File) => {
       formData.append('files', file);
     });
     formData.append('password', password);
-
+  
     try {
       const response = await fetch('/api/convert', {
         method: 'POST',
         body: formData,
       });
-
+  
+      // --- THIS IS THE KEY FIX ---
+      // If the response is NOT okay, then it's an error with a JSON body.
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json(); // Only call .json() on errors.
         throw new Error(errorData.error || 'File conversion failed.');
       }
-
+  
+      // If the response IS okay, it's the zip file. Process it as a blob.
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -53,9 +55,11 @@ function App() {
       a.remove();
       
     } catch (error: any) {
+      // This will now catch both network errors and the specific JSON error from the backend.
       alert(`Error: ${error.message}`);
     }
   };
+
 
   // --- JSX to render the UI ---
   return (
