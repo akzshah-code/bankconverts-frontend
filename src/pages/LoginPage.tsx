@@ -1,13 +1,34 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react'; // 1. Import the icons
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // Only need state for one password
+
+
+  {/* 3. Update the Password input */}
+  <div className="relative">
+  <input
+    id="password"
+    name="password"
+    type={showPassword ? 'text' : 'password'}
+    required
+    className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+    placeholder="Password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+  />
+  <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+    <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-500">
+      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+    </button>
+  </div>
+</div>
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would send this to your backend for authentication
     console.log({ email, password });
     alert('Login submitted!');
   };
