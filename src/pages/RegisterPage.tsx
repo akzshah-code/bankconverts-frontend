@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom'; // Keep this for the link
 import { Eye, EyeOff } from 'lucide-react';
-import axios from 'axios'; // We will use this
+
 
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
