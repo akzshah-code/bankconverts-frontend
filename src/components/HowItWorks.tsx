@@ -1,19 +1,24 @@
 
-import { UploadCloud, Bot, DownloadCloud } from 'lucide-react';
+
+// Step 1: Import your new icons from the assets folder
+import UploadIcon from '../assets/upload-icon.svg';
+import ProcessingIcon from '../assets/processing-icon.svg';
+import DownloadIcon from '../assets/download-icon.svg';
 
 const steps = [
   {
-    icon: <UploadCloud size={48} className="text-blue-600 mb-4" />,
+    // Step 2: Use an <img> tag for each icon
+    icon: <img src={UploadIcon} alt="Upload your file" className="h-12 w-12 mb-4" />,
     title: '1. Upload',
     description: 'Upload your PDF or image file.',
   },
   {
-    icon: <Bot size={48} className="text-blue-600 mb-4" />,
+    icon: <img src={ProcessingIcon} alt="Processing your file" className="h-12 w-12 mb-4" />,
     title: '2. Process',
     description: 'Our secure AI extracts the data in seconds.',
   },
   {
-    icon: <DownloadCloud size={48} className="text-blue-600 mb-4" />,
+    icon: <img src={DownloadIcon} alt="Download your file" className="h-12 w-12 mb-4" />,
     title: '3. Download',
     description: 'Download your perfectly formatted Excel file.',
   },
@@ -33,7 +38,7 @@ const HowItWorks = () => {
         </div>
         <div className="mt-12 grid gap-8 md:grid-cols-3 md:gap-12">
           {steps.map((step) => (
-            <div key={step.title} className="text-center">
+            <div key={step.title} className="flex flex-col items-center text-center">
               {step.icon}
               <h3 className="text-xl font-semibold">{step.title}</h3>
               <p className="mt-2 text-gray-600">{step.description}</p>

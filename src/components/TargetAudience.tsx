@@ -31,7 +31,8 @@ const TargetAudience = () => {
         </div>
         <div className="mt-12 grid gap-8 md:grid-cols-3 md:gap-12">
           {audience.map((person) => (
-            <div key={person.title} className="bg-white p-8 rounded-lg shadow-md text-center">
+            // The class on this div is the only change needed
+            <div key={person.title} className="bg-white p-8 rounded-lg shadow-md flex flex-col items-center text-center">
               {person.icon}
               <h3 className="text-xl font-semibold">{person.title}</h3>
               <p className="mt-2 text-gray-600">{person.description}</p>
@@ -44,4 +45,3 @@ const TargetAudience = () => {
 };
 
 export default TargetAudience;
-
