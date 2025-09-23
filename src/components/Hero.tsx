@@ -3,10 +3,10 @@
 const Hero = () => {
   return (
     <section className="text-center pt-32 pb-16">
-      <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 leading-tight">
-        Convert Bank Statements to <span className="text-green-600">Excel</span>
+      <h1 className="text-4xl md:text-6xl font-bold text-gray-900 leading-tight">
+        Convert <span className="text-blue-600"> Bank Statements </span> to <span className="text-green-600">Excel</span>
         <br />
-        in <span className="text-blue-600">Seconds</span>
+        in Seconds
       </h1>
       <p className="mt-6 max-w-2xl mx-auto text-lg text-gray-600">
         Stop wasting hours on manual data entry. Upload any bank statement PDF or image and get a clean, ready-to-use Excel file instantly.

@@ -33,7 +33,7 @@ const HomePage = () => {
       {/* Hero Section */}
       <div className="bg-gray-50 pt-24 pb-32">
         <div className="container mx-auto px-6 text-center">
-          <h1 className="text-5xl font-extrabold text-gray-900">
+          <h1 className="text-5xl font-bold text-gray-900">
             Transform Statements. Unlock Data.
           </h1>
           <p className="mt-4 text-lg text-gray-600">

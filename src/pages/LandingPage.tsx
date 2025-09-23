@@ -1,21 +1,22 @@
 
-import Header from '../components/Header';
-import Hero from '../components/Hero';
+import Hero from '../components/Hero'; // Your existing Hero component
+import HowItWorks from '../components/HowItWorks';
 import Features from '../components/Features';
-// Import other components like HowItWorks, FAQ, Footer as you create them
+import TargetAudience from '../components/TargetAudience';
+import Faq from '../components/Faq';
+import Footer from '../components/Footer'; // Assuming you have a Footer component
 
 const LandingPage = () => {
   return (
-    <div className="bg-white">
-      <Header />
+    <div className="bg-white text-gray-800">
+      <Hero />
       <main>
-        <Hero />
+        <HowItWorks />
         <Features />
-        {/* You can add more sections here */}
-        {/* <HowItWorks /> */}
-        {/* <FAQ /> */}
+        <TargetAudience />
+        <Faq />
       </main>
-      {/* <Footer /> */}
+      <Footer />
     </div>
   );
 };
