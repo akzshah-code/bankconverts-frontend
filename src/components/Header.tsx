@@ -1,6 +1,8 @@
 // src/components/Header.tsx
+// src/components/Header.tsx
 import { Link } from 'react-router-dom';
-import Logo from '../assets/logo.svg?react'; // Corrected import statement
+// Revert to the default URL import
+import logoUrl from '../assets/logo.svg';
 
 const Header = () => {
   return (
@@ -8,8 +10,8 @@ const Header = () => {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
-          {/* Use the imported SVG component */}
-          <Logo className="h-8 text-blue-600" />
+          {/* Use a standard img tag instead of a component */}
+          <img src={logoUrl} alt="BankConverts Logo" className="h-8" />
           <span className="text-xl font-bold text-gray-800">BankConverts</span>
         </Link>
         
@@ -17,7 +19,6 @@ const Header = () => {
         <div className="hidden md:flex items-center space-x-8">
           <Link to="/app" className="text-gray-600 hover:text-blue-600 font-medium">Convert</Link>
           <Link to="/pricing" className="text-gray-600 hover:text-blue-600 font-medium">Pricing</Link>
-          {/* <Link to="/blog" className="text-gray-600 hover:text-blue-600 font-medium">Blog</Link> */}
         </div>
 
         {/* Action Buttons */}
