@@ -45,11 +45,11 @@ const LoginPage = () => {
             </div>
 
             {/* Password Input with Icon */}
-            <div className="relative"> {/* Key Fix #1: Add 'relative' positioning here */}
+            <div className="relative">
               <input
                 id="password"
                 name="password"
-                type={showPassword ? 'text' : 'password'} {/* Key Fix #2: Use state to toggle type */}
+                type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -57,7 +57,7 @@ const LoginPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"> {/* This positions the icon */}
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
