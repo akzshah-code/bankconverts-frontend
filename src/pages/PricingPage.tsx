@@ -22,43 +22,63 @@ const PricingPage = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   //... (handlePayment function remains the same)
- const handlePayment = async (amount: number) => {
+  const handlePayment = async (amount: number, tier: string) => {
     if (amount <= 0) {
       // Handle the "Contact Us" case
       window.location.href = "mailto:support@bankconverts.com";
       return;
     }
+    try {
+      // 1. Get the public key from our backend
+      const { data: { key } } = await axios.get("/api/get-key");
 
-    const { data: { key } } = await axios.get("/api/get-key"); // Get Razorpay key from backend
+      // 2. Create an order on our backend
+      const { data: order } = await axios.post('/api/create-order', {
+        amount: amount * 100, // Amount in paise
+      });
 
-    const { data: order } = await axios.post('/api/create-order', {
-      amount: amount * 100,
-    });
+      // 3. Set up Razorpay options
+      const options = {
+          key,
+          amount: order.amount,
+          currency: "INR",
+          name: "BankConverts",
+          description: `Subscription for ${tier} Plan`,
+          order_id: order.id,
+          handler: async function (response: any) {
+              // 4. Verify the payment on our backend
+              const verification = await axios.post('/api/verify-payment', {
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+              });
 
-    const options = {
-        key,
-        amount: order.amount,
-        currency: "INR",
-        name: "BankConverts",
-        description: "Subscription Payment",
-        order_id: order.id,
-        handler: async function (response: any) {
-            const verification = await axios.post('/api/verify-payment', {
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-            });
+              if (verification.data.status === 'success') {
+                  alert('Payment Successful! Your subscription is active.');
+                  // Here you would redirect to a dashboard or success page
+              } else {
+                  alert('Payment verification failed. Please contact support.');
+              }
+          },
+          prefill: {
+              // Optional: You can prefill this if the user is logged in
+              name: "", 
+              email: "",
+              contact: "",
+          },
+          theme: {
+              color: "#3B82F6" // Blue color
+          }
+      };
 
-            if (verification.data.status === 'success') {
-                alert('Payment Successful!');
-            } else {
-                alert('Payment Failed!');
-            }
-        },
-    };
+      // 5. Open the Razorpay checkout modal
+      const rzp1 = new (window as any).Razorpay(options);
+      rzp1.open();
 
-    const rzp1 = new (window as any).Razorpay(options);
-    rzp1.open();
+    } catch (error) {
+      console.error("Payment error:", error);
+      alert("Could not initiate payment. Please try again.");
+    }
   };
 
   const plansToShow = billingCycle === 'monthly' ? pricingData.monthly : pricingData.yearly;
@@ -113,7 +133,7 @@ const PricingPage = () => {
 
               {/* 2. Add the onClick handler to the button */}
               <button
-                onClick={() => handlePayment(plan.price)}
+                onClick={() => handlePayment(plan.price, plan.tier)}
                 className={`mt-6 w-full text-center px-4 py-2 font-semibold rounded-md text-white ${plan.tier === 'Enterprise' ? 'bg-gray-700 hover:bg-gray-800' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 {plan.buttonText}
