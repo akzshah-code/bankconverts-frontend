@@ -1,9 +1,17 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+/// <reference types="vite-plugin-svgr/client" />
+import svgr from 'vite-plugin-svgr'; // 1. Import the plugin
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    svgr({
+      exportAsDefault: true,
+    }),
+  ],
+
   server: {
     proxy: {
       // Proxy /api requests to your Flask backend
