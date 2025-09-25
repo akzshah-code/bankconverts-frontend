@@ -1,12 +1,14 @@
 // src/pages/ConverterPage.tsx
 
-import Converter from '../components/Converter'; // Import the component
+import Converter from '../components/Converter'; // Make sure this path is correct
 
 const ConverterPage = () => {
   return (
-    // This div centers the Converter component on the page
+    // This div is responsible for centering the component
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-50 p-4">
-      <Converter />
+      <div className="w-full max-w-xl">
+        <Converter />
+      </div>
     </div>
   );
 };
