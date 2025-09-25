@@ -1,7 +1,9 @@
 /* Add your styles for the Converter component here */
 .converter-container {
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-  }
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 0px;
+  max-width: 600px;
+  margin: 0 auto;
+}
   
