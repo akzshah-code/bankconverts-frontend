@@ -1,12 +1,102 @@
+// src/pages/ConverterPage.tsx
 
-import Converter from '../components/Converter'; // Assuming you want to use the existing converter
+import { useState } from 'react';
+import { UploadCloud, FileText, Download, Eye, EyeOff } from 'lucide-react'; // 1. Import Eye icons
 
 const ConverterPage = () => {
+  const [file, setFile] = useState<File | null>(null);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // 2. Add state for password visibility
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleConvert = () => {
+    if (!file) {
+      alert('Please select a file first.');
+      return;
+    }
+    // Here you will later call your backend API
+    console.log('Converting file:', file.name, 'with password:', password);
+    alert('Starting conversion process!');
+  };
+
   return (
-    <div>
-      <h1>Bank Statement Converter</h1>
-      <p>Upload your file to get started.</p>
-      <Converter />
+    <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-2xl">
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
+            Convert Your Bank Statement
+          </h2>
+          <p className="text-center text-gray-500 mb-8">
+            Upload a PDF or image file to get a clean Excel spreadsheet in seconds.
+          </p>
+          
+          {/* File Upload Area */}
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors">
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".pdf,.jpg,.jpeg,.png"
+            />
+            <label htmlFor="file-upload" className="cursor-pointer">
+              <div className="flex flex-col items-center">
+                <UploadCloud className="w-12 h-12 text-gray-400 mb-4" />
+                <p className="text-gray-700 font-semibold">
+                  Drag & drop your file here, or click to select a file
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Supported formats: PDF, JPG, PNG
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {file && (
+            <div className="mt-6 flex items-center justify-center bg-gray-100 p-3 rounded-lg">
+              <FileText className="w-5 h-5 text-gray-600" />
+              <span className="ml-3 text-gray-800 font-medium">{file.name}</span>
+            </div>
+          )}
+
+          {/* 3. Updated Password Input with Toggle */}
+          <div className="mt-6 relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter PDF Password (if any)"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+
+          {/* Convert Button */}
+          <div className="mt-8">
+            <button
+              onClick={handleConvert}
+              disabled={!file}
+              className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              <Download className="w-5 h-5 mr-2" />
+              Convert to Excel
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
