@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { UploadCloud, FileText, Download, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import axios from 'axios';
+import './Converter.css';
 
 const Converter = () => {
   const [file, setFile] = useState<File | null>(null);
