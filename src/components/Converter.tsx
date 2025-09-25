@@ -1,112 +1,102 @@
-// src/pages/Converter.tsx
+// src/components/Converter.tsx
 
-import React, { useState } from 'react';
-import axios from 'axios';
-// Make sure your CSS import path is correct
-import './Converter.css'; //the missing file
+import { useState } from 'react';
+import { UploadCloud, FileText, Download, Eye, EyeOff } from 'lucide-react';
 
-function Converter() {
+const Converter = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [password, setPassword] = useState<string>('');
-  const [message, setMessage] = useState<string>('');
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files) {
       setFile(e.target.files[0]);
-      setMessage('');
-      setError('');
     }
   };
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleConvert = () => {
     if (!file) {
-      setError('Please select a file first.');
+      alert('Please select a file first.');
       return;
     }
-
-    setIsUploading(true);
-    setError('');
-    setMessage('Initializing upload...');
-
-    try {
-      // Step 1: Request a signed URL from the backend using the environment variable.
-      console.log("Requesting signed URL from:", import.meta.env.VITE_API_URL);
-      const backendResponse = await axios.post(`${import.meta.env.VITE_API_URL}/api/generate-upload-url`, {
-        filename: file.name,
-        contentType: file.type
-      });
-
-      const { signedUrl, blobName } = backendResponse.data;
-      console.log("Received signed URL. Uploading file directly to storage...");
-      setMessage('Uploading file...');
-
-      // Step 2: Upload the file directly to Google Cloud Storage using the signed URL.
-      await axios.put(signedUrl, file, {
-        headers: {
-          'Content-Type': file.type,
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setMessage(`Uploading: ${percentCompleted}%`);
-          }
-        }
-      });
-      
-      console.log("File uploaded successfully! Blob name:", blobName);
-      
-      setMessage(`File '${file.name}' uploaded successfully. Processing will begin shortly.`);
-      setFile(null); // Clear the file input after successful upload
-
-    } catch (err) {
-      console.error("An error occurred during the upload process:", err);
-      setError('An error occurred during conversion. Please try again.');
-      setMessage('');
-    } finally {
-      setIsUploading(false);
-    }
+    // Backend API call will go here
+    console.log('Converting file:', file.name, 'with password:', password);
+    alert('Starting conversion process!');
   };
 
   return (
-    <div className="converter-container">
-        <form onSubmit={handleSubmit} className="upload-form">
-          <div className="file-input-wrapper">
-            <input 
-              type="file" 
-              id="file" 
-              onChange={handleFileChange} 
-              style={{ display: 'none' }} 
-            />
-            <label htmlFor="file" className="file-input-label">
-              {file ? `Selected file: ${file.name}` : 'Click to select a file'}
-            </label>
-          </div>
+    <div className="w-full max-w-2xl">
+      <div className="bg-white rounded-lg shadow-lg p-8">
+        <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
+          Convert Your Bank Statement
+        </h2>
+        <p className="text-center text-gray-500 mb-8">
+          Upload a PDF or image file to get a clean Excel spreadsheet in seconds.
+        </p>
 
+        {/* File Upload Area */}
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors">
           <input
-            type="password"
-            value={password}
-            onChange={handlePasswordChange}
-            placeholder="Enter PDF Password (if any)"
-            className="password-input"
+            type="file"
+            id="file-upload"
+            className="hidden"
+            onChange={handleFileChange}
+            accept=".pdf,.jpg,.jpeg,.png"
           />
+          <label htmlFor="file-upload" className="cursor-pointer">
+            <div className="flex flex-col items-center">
+              <UploadCloud className="w-12 h-12 text-gray-400 mb-4" />
+              <p className="text-gray-700 font-semibold">
+                Drag & drop your file here, or click to select a file
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Supported formats: PDF, JPG, PNG
+              </p>
+            </div>
+          </label>
+        </div>
 
-          <button type="submit" className="convert-button" disabled={!file || isUploading}>
-            {isUploading ? 'Uploading...' : 'Convert to Excel'}
+        {file && (
+          <div className="mt-6 flex items-center justify-center bg-gray-100 p-3 rounded-lg">
+            <FileText className="w-5 h-5 text-gray-600" />
+            <span className="ml-3 text-gray-800 font-medium">{file.name}</span>
+          </div>
+        )}
+
+        {/* Password Input with Toggle */}
+        <div className="mt-6 relative">
+          <input
+            type={showPassword ? 'text' : 'password'}
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter PDF Password (if any)"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
+        </div>
 
-          {message && <p className="message success">{message}</p>}
-          {error && <p className="message error">{error}</p>}
-        </form>
+        {/* Convert Button */}
+        <div className="mt-8">
+          <button
+            onClick={handleConvert}
+            disabled={!file}
+            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+          >
+            <Download className="w-5 h-5 mr-2" />
+            Convert to Excel
+          </button>
+        </div>
+      </div>
     </div>
   );
-}
+};
 
 export default Converter;
-
