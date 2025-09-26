@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { UploadCloud, FileText, Download, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import axios from 'axios';
-import './Converter.css';
 
 const Converter = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -11,11 +10,13 @@ const Converter = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFile(e.target.files[0]);
-      setError(null); // Clear previous errors on new file selection
+      setError(null);
+      setDownloadUrl(null); // Reset on new file selection
     }
   };
 
@@ -27,40 +28,30 @@ const Converter = () => {
 
     setIsLoading(true);
     setError(null);
+    setDownloadUrl(null);
 
-    // Use FormData to send the file and password
     const formData = new FormData();
     formData.append('file', file);
     formData.append('password', password);
 
     try {
-      // Make the API request to your Flask backend
-      const response = await axios.post('/api/upload-statement', formData, {
-        responseType: 'blob', // Important: we expect a file back
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      // 1. POST to /api/convert and expect a JSON response
+      const response = await axios.post('/api/convert', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      // Create a temporary URL for the blob data
-      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = window.URL.createObjectURL(blob);
-      
-      // Create a hidden link to trigger the download
-      const link = document.createElement('a');
-      link.href = url;
-      const downloadName = file.name.replace(/\.[^/.]+$/, '.xlsx');
-      link.setAttribute('download', downloadName);
-      document.body.appendChild(link);
-      link.click();
-
-      // Clean up by revoking the object URL and removing the link
-      link.parentNode?.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-    } catch (err) {
-      console.error('Conversion failed:', err);
-      setError('File conversion failed. Please check the file and try again.');
+      // 2. Check for the downloadUrl in the response
+      if (response.data?.downloadUrl) {
+        setDownloadUrl(response.data.downloadUrl);
+      } else {
+        // Handle cases where the backend returns an error message in a 200 OK response
+        setError(response.data.error || 'An unexpected error occurred.');
+      }
+    } catch (err: any) {
+      console.error('Conversion API failed:', err);
+      // Display the specific error from the backend if available
+      const errorMessage = err.response?.data?.error || 'File conversion failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -92,23 +83,19 @@ const Converter = () => {
               <p className="text-gray-700 font-semibold">
                 Drag & drop your file here, or click to select a file
               </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Supported formats: PDF, JPG, PNG
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Supported formats: PDF, JPG, PNG</p>
             </div>
           </label>
         </div>
 
-        {file && (
+        {file && !downloadUrl && (
           <div className="mt-6 flex items-center justify-center bg-gray-100 p-3 rounded-lg">
             <FileText className="w-5 h-5 text-gray-600" />
             <span className="ml-3 text-gray-800 font-medium">{file.name}</span>
           </div>
         )}
 
-        {error && (
-            <p className="mt-4 text-center text-red-600 font-medium">{error}</p>
-        )}
+        {error && <p className="mt-4 text-center text-red-600 font-medium">{error}</p>}
 
         {/* Password Input */}
         <div className="mt-6 relative">
@@ -126,31 +113,41 @@ const Converter = () => {
             onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed"
             disabled={isLoading}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
           </button>
         </div>
 
-        {/* Convert Button */}
+        {/* Action Button: Changes from Convert to Download */}
         <div className="mt-8">
-          <button
-            onClick={handleConvert}
-            disabled={!file || isLoading}
-            className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {isLoading ? (
-              <>
-                <LoaderCircle className="w-5 h-5 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Download className="w-5 h-5 mr-2" />
-                Convert to Excel
-              </>
-            )}
-          </button>
+          {!downloadUrl ? (
+            <button
+              onClick={handleConvert}
+              disabled={!file || isLoading}
+              className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center"
+            >
+              {isLoading ? (
+                <>
+                  <LoaderCircle className="w-5 h-5 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5 mr-2" />
+                  Convert to Excel
+                </>
+              )}
+            </button>
+          ) : (
+            <a
+              href={downloadUrl}
+              download
+              className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 flex items-center justify-center"
+            >
+              <Download className="w-5 h-5 mr-2" />
+              Download Your File
+            </a>
+          )}
         </div>
       </div>
     </div>
@@ -158,3 +155,4 @@ const Converter = () => {
 };
 
 export default Converter;
+
