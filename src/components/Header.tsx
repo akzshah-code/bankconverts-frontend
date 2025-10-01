@@ -1,5 +1,4 @@
 // src/components/Header.tsx
-// src/components/Header.tsx
 import { Link } from 'react-router-dom';
 // Revert to the default URL import
 import logoUrl from '../assets/logo.svg';

@@ -1,12 +1,19 @@
 
+import { Outlet } from 'react-router-dom';
+//import Header from './Header'; // Assuming you have a Header component
+//import Footer from './Footer'; // Assuming you have a Footer component
 
 
-const LandingPage = () => {
+const PageLayout = () => {
   return (
-    <div>
-      <h1>Hello from the Landing Page!</h1>
-    </div>
+      <div className="flex flex-col min-h-screen">
+          {/* <Header /> */}
+          <main className="flex-grow">
+              <Outlet />
+          </main>
+          {/* <Footer /> */}
+      </div>
   );
 };
 
-export default LandingPage;
+export default PageLayout;
