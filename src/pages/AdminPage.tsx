@@ -1,109 +1,119 @@
 // src/pages/AdminPage.tsx
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-// Define types for our data
-interface AdminStats {
-  total_users: number;
-  total_conversions: number;
-}
-
 interface User {
   id: number;
   email: string;
-  active: boolean;
-  roles: string[];
+  subscription_plan: string;
+  usage: string;
+  plan_renews: string;
 }
 
 function AdminPage(): React.JSX.Element {
-  const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const { isAuthenticated } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
-    const fetchData = async () => {
-      const token = localStorage.getItem('authToken');
+    const fetchUsers = async () => {
       try {
-        // Fetch dashboard stats
-        const statsResponse = await fetch('http://127.0.0.1:5000/admin/dashboard', {
-          headers: { 'Authentication-Token': token || '' },
-        });
-        if (!statsResponse.ok) throw new Error('Failed to fetch admin stats.');
-        const statsData = await statsResponse.json();
-        setStats(statsData);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
 
-        // Fetch user list
-        const usersResponse = await fetch('http://127.0.0.1:5000/admin/users', {
-          headers: { 'Authentication-Token': token || '' },
+        const response = await fetch('/api/admin/users', {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!usersResponse.ok) throw new Error('Failed to fetch users.');
-        const usersData = await usersResponse.json();
-        setUsers(usersData);
 
+        if (response.status === 403) {
+          throw new Error('Access Denied: You do not have permission to view this page.');
+        }
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data.');
+        }
+
+        const data: User[] = await response.json();
+        setUsers(data);
       } catch (err) {
-        if (err instanceof Error) setError(err.message);
-        else setError('An unknown error occurred.');
+        setError(err instanceof Error ? err.message : 'An unknown error occurred.');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [isAuthenticated, navigate]);
+    fetchUsers();
+  }, [navigate]);
 
-  if (loading) return <p>Loading admin dashboard...</p>;
-  if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
+  if (loading) {
+    return <div className="text-center p-8">Loading admin dashboard...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center p-8 text-red-500">Error: {error}</div>;
+  }
 
   return (
-    <div className="admin-dashboard-container">
-      <header>
-        <h2>Admin Dashboard</h2>
+    <div className="bg-gray-100 min-h-screen">
+      <header className="bg-white shadow-sm p-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <button 
+          onClick={logout} 
+          className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
+        >
+          Logout
+        </button>
       </header>
 
-      <section className="stats-cards">
-        <div className="card">
-          <h4>Total Users</h4>
-          <p>{stats?.total_users}</p>
+      <main className="p-8">
+        {/* Placeholder for Key Metrics */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Key Metrics</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* These will be populated later */}
+            <div className="bg-white p-4 shadow rounded">Total Users: {users.length}</div>
+            <div className="bg-white p-4 shadow rounded">Active Subscriptions: N/A</div>
+            <div className="bg-white p-4 shadow rounded">Total Revenue (MRR): N/A</div>
+            <div className="bg-white p-4 shadow rounded">Total Pages Used: N/A</div>
+          </div>
         </div>
-        <div className="card">
-          <h4>Total Conversions</h4>
-          <p>{stats?.total_conversions}</p>
-        </div>
-      </section>
 
-      <section>
-        <h3>All Registered Users</h3>
-        <table className="users-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Roles</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td>{user.id}</td>
-                <td>{user.email}</td>
-                <td>{user.active ? 'Active' : 'Inactive'}</td>
-                <td>{user.roles.join(', ')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+        {/* All Users Table */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">All Users</h2>
+          <div className="bg-white shadow rounded overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="py-3 px-6 text-left">User</th>
+                  <th className="py-3 px-6 text-left">Subscription Plan</th>
+                  <th className="py-3 px-6 text-left">Usage</th>
+                  <th className="py-3 px-6 text-left">Plan Renews</th>
+                  <th className="py-3 px-6 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="py-4 px-6">{user.email}</td>
+                    <td className="py-4 px-6">{user.subscription_plan}</td>
+                    <td className="py-4 px-6">{user.usage}</td>
+                    <td className="py-4 px-6">{user.plan_renews}</td>
+                    <td className="py-4 px-6">
+                      <button className="text-blue-500 hover:underline">Edit</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,151 +1,122 @@
 // src/components/Converter.tsx
+import React, { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Eye, EyeOff } from 'lucide-react'; // Using lucide-react for icons
 
-import { useState } from 'react';
-import { UploadCloud, FileText, Download, Eye, EyeOff, LoaderCircle } from 'lucide-react';
-import axios from 'axios';
+type Status = 'idle' | 'uploading' | 'success' | 'error';
 
-const Converter = () => {
-  const [file, setFile] = useState<File | null>(null);
+const Converter: React.FC = () => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false); // State for password visibility
+  const [status, setStatus] = useState<Status>('idle');
+  const [message, setMessage] = useState('');
+  const [downloadUrl, setDownloadUrl] = useState('');
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFile(e.target.files[0]);
-      setError(null);
-      setDownloadUrl(null); // Reset on new file selection
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      setSelectedFile(acceptedFiles[0]);
+      setStatus('idle');
+      setMessage('');
+      setDownloadUrl('');
     }
-  };
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   const handleConvert = async () => {
-    if (!file) {
-      setError('Please select a file first.');
+    if (!selectedFile) {
+      setStatus('error');
+      setMessage('Please select a file first.');
       return;
     }
-
-    setIsLoading(true);
-    setError(null);
-    setDownloadUrl(null);
+    
+    setStatus('uploading');
+    setMessage('Uploading and processing... This may take a moment.');
+    setDownloadUrl('');
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', selectedFile);
     formData.append('password', password);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
-      // 1. POST to /api/convert and expect a JSON response
-      const response = await axios.post('/api/convert', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const response = await fetch('http://127.0.0.1:5000/api/convert', {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal
       });
 
-      // 2. Check for the downloadUrl in the response
-      if (response.data?.downloadUrl) {
-        setDownloadUrl(response.data.downloadUrl);
+      clearTimeout(timeoutId);
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setStatus('success');
+        setMessage(result.message);
+        setDownloadUrl(result.downloadUrl);
       } else {
-        // Handle cases where the backend returns an error message in a 200 OK response
-        setError(response.data.error || 'An unexpected error occurred.');
+        setStatus('error');
+        setMessage(`Error: ${result.error || 'An unknown error occurred.'}`);
       }
-    } catch (err: any) {
-      console.error('Conversion API failed:', err);
-      // Display the specific error from the backend if available
-      const errorMessage = err.response?.data?.error || 'File conversion failed. Please try again.';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      setStatus('error');
+      if (error.name === 'AbortError') {
+        setMessage('The request timed out. The file might be too large or complex.');
+      } else {
+        setMessage('Failed to connect to the backend server. Is it running?');
+      }
     }
   };
 
   return (
-    <div className="w-full max-w-2xl">
-      <div className="bg-white rounded-lg shadow-lg p-8">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
+    <div className="bg-white">
+      <div className="container mx-auto px-6 pt-8 pb-20 text-center">
+        <h2 className="text-5xl font-bold text-center text-gray-900 mb-2">
           Convert Your Bank Statement
         </h2>
-        <p className="text-center text-gray-500 mb-8">
+        <p className="text-center text-gray-600 mb-8">
           Upload a PDF or image file to get a clean Excel spreadsheet in seconds.
         </p>
-
-        {/* File Upload Area */}
-        <div className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors ${error ? 'border-red-500' : 'border-gray-300'}`}>
-          <input
-            type="file"
-            id="file-upload"
-            className="hidden"
-            onChange={handleFileChange}
-            accept=".pdf,.jpg,.jpeg,.png"
-            disabled={isLoading}
-          />
-          <label htmlFor="file-upload" className={isLoading ? 'cursor-not-allowed' : 'cursor-pointer'}>
-            <div className="flex flex-col items-center">
-              <UploadCloud className="w-12 h-12 text-gray-400 mb-4" />
-              <p className="text-gray-700 font-semibold">
-                Drag & drop your file here, or click to select a file
-              </p>
-              <p className="text-xs text-gray-500 mt-1">Supported formats: PDF, JPG, PNG</p>
-            </div>
-          </label>
-        </div>
-
-        {file && !downloadUrl && (
-          <div className="mt-6 flex items-center justify-center bg-gray-100 p-3 rounded-lg">
-            <FileText className="w-5 h-5 text-gray-600" />
-            <span className="ml-3 text-gray-800 font-medium">{file.name}</span>
+        <div className="mt-8 max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <div {...getRootProps()} className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all duration-300 cursor-pointer ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-500 hover:bg-gray-50'}`}>
+            <input {...getInputProps()} />
+            <svg className="w-16 h-26 text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            {selectedFile ? <p className="text-lg font-semibold text-gray-700">{selectedFile.name}</p> : <><p className="text-lg font-semibold text-gray-700">Drag & Drop Your Files Here</p><p className="mt-1 text-sm text-gray-500">or <span className="text-blue-600 font-medium">click to browse</span></p></>}
           </div>
-        )}
-
-        {error && <p className="mt-4 text-center text-red-600 font-medium">{error}</p>}
-
-        {/* Password Input */}
-        <div className="mt-6 relative">
-          <input
-            type={showPassword ? 'text' : 'password'}
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter PDF Password (if any)"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
-            disabled={isLoading}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed"
-            disabled={isLoading}
-          >
-            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-          </button>
-        </div>
-
-        {/* Action Button: Changes from Convert to Download */}
-        <div className="mt-8">
-          {!downloadUrl ? (
+          
+          {/* --- Updated Password Input --- */}
+          <div className="mt-4 relative">
+            <input 
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter PDF Password (if any)" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
             <button
-              onClick={handleConvert}
-              disabled={!file || isLoading}
-              className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center"
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-600 hover:text-blue-500"
+              aria-label="Toggle password visibility"
             >
-              {isLoading ? (
-                <>
-                  <LoaderCircle className="w-5 h-5 mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Download className="w-5 h-5 mr-2" />
-                  Convert to Excel
-                </>
-              )}
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
-          ) : (
-            <a
-              href={downloadUrl}
-              download
-              className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 flex items-center justify-center"
-            >
-              <Download className="w-5 h-5 mr-2" />
-              Download Your File
+          </div>
+
+          <p className="text-xs text-gray-400 mt-4 text-center">Supported formats: PDF, JPG, PNG, CSV</p>
+          
+          <button onClick={handleConvert} disabled={status === 'uploading'} className="w-full mt-8 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl text-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:bg-gray-400 disabled:cursor-not-allowed">
+            {status === 'uploading' ? 'Processing...' : 'Convert to Excel'}
+          </button>
+          
+          {message && <p className={`mt-4 text-sm font-semibold ${status === 'error' ? 'text-red-500' : 'text-gray-700'}`}>{message}</p>}
+          
+          {status === 'success' && downloadUrl && (
+            <a href={`http://127.0.0.1:5000${downloadUrl}`} download className="w-full mt-4 inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-4 rounded-xl text-lg transition-colors">
+              Download Converted File
             </a>
           )}
         </div>
