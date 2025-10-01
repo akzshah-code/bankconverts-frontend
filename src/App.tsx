@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import { BrowserRouter as Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import PageLayout from './components/PageLayout';
 import LandingPage from './pages/LandingPage';
 import PricingPage from './pages/PricingPage';
