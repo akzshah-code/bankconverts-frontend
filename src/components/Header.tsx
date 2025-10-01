@@ -11,8 +11,10 @@ const Header = () => {
         <Link to="/" className="flex items-center space-x-2">
           {/* Use a standard img tag instead of a component */}
           <img src={logoUrl} alt="BankConverts Logo" className="h-8" />
-          <span className="text-xl font-bold text-gray-800">BankConverts</span>
-          <p className="text-sm text-gray-500">Transform Statements. Unlock Data.</p>
+          <div className="flex flex-col">
+            <span className="text-xl font-bold text-gray-800">BankConverts</span>
+            <p className="text-xs text-gray-500">Transform Statements. Unlock Data.</p>
+          </div>
         </Link>
         
         {/* Navigation Links */}
