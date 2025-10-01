@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Routes, Route } from 'react-router-dom';
 import PageLayout from './components/PageLayout';
 import LandingPage from './pages/LandingPage';
 import Converter from './components/Converter';
@@ -16,7 +16,6 @@ import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
-    <Router>
       <AuthProvider>
         <Routes>
           {/* Routes WITH Header and Footer */}
@@ -56,8 +55,7 @@ function App() {
             }
           />
         </Routes>
-      </AuthProvider>
-    </Router>
+    </AuthProvider>
   );
 }
 
