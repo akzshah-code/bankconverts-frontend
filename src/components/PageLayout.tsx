@@ -1,16 +1,19 @@
-import Header from './Header';
-import Footer from './Footer';
+
 import { Outlet } from 'react-router-dom';
+import Header from './Header'; // Assuming you have a Header component
+import Footer from './Footer'; // Assuming you have a Footer component
+
 
 const PageLayout = () => {
   return (
-    <div className="flex flex-col min-h-screen">
+    <>
       <Header />
-      <main className="flex-grow">
-        <Outlet /> {/* Child routes will be rendered here */}
+      <main>
+        {/* The Outlet component will render the matching child route component */}
+        <Outlet />
       </main>
       <Footer />
-    </div>
+    </>
   );
 };
 
