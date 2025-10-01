@@ -1,20 +1,12 @@
 
-import { Outlet } from 'react-router-dom';
-import Header from './Header'; // Assuming you have a Header component
-import Footer from './Footer'; // Assuming you have a Footer component
 
 
-const PageLayout = () => {
+const LandingPage = () => {
   return (
-    <>
-      <Header />
-      <main>
-        {/* The Outlet component will render the matching child route component */}
-        <Outlet />
-      </main>
-      <Footer />
-    </>
+    <div>
+      <h1>Hello from the Landing Page!</h1>
+    </div>
   );
 };
 
-export default PageLayout;
+export default LandingPage;
