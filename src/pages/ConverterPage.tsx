@@ -14,11 +14,6 @@ import Seo from '../components/Seo'; // 1. Import the Seo component
 const ConverterPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8 py-12">
-      {/* 
-        Since your FileUploader component handles everything internally 
-        (file selection, preview, and conversion), we can use it directly.
-        This simplifies the code and fixes the error.
-      */}
       <FileUploader />
     </div>
   );

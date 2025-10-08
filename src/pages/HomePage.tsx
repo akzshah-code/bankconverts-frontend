@@ -1,6 +1,6 @@
 // src/pages/HomePage.tsx
 
-import { useState } from 'react'; // 1. Import useState
+
 import Seo from '../components/Seo';
 import Converter from '../components/Converter';
 import Features from '../components/Features';
@@ -17,10 +17,7 @@ import Features from '../components/Features';
 
 const HomePage = () => {
   // 2. Define the state needed by the Converter component
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [pdfPassword, setPdfPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
 
   return (
     <>
@@ -35,16 +32,7 @@ const HomePage = () => {
 
       <div className="max-w-2xl mx-auto px-4">
         {/* 3. Pass the state and setters as props to the Converter component */}
-        <Converter 
-          selectedFile={selectedFile}
-          setSelectedFile={setSelectedFile}
-          pdfPassword={pdfPassword}
-          setPdfPassword={setPdfPassword}
-          isLoading={isLoading}
-          setIsLoading={setIsLoading}
-          error={error}
-          setError={setError}
-        />
+        <Converter />
       </div>
       
       {/* You can now include other sections of your landing page */}
