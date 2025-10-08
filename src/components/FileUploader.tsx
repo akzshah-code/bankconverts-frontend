@@ -34,7 +34,8 @@ function FileUploader(): React.JSX.Element {
     if (password) formData.append('password', password);
 
     try {
-      const extractResponse = await fetch('http://127.0.0.1:5000/extract', {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const extractResponse = await fetch(`${apiUrl}/extract`, {
         method: 'POST',
         body: formData,
       });
@@ -53,7 +54,8 @@ function FileUploader(): React.JSX.Element {
     setIsProcessing(true);
     setError('');
     try {
-      const convertResponse = await fetch('http://127.0.0.1:5000/convert', {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      const convertResponse = await fetch(`${apiUrl}/convert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ format: 'xlsx', data: editedData }),
