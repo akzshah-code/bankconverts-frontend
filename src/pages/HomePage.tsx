@@ -1,53 +1,55 @@
 // src/pages/HomePage.tsx
 
+import { useState } from 'react'; // 1. Import useState
 import Seo from '../components/Seo';
-import Converter from '../components/Converter'; // Import the new component
+import Converter from '../components/Converter';
+import Features from '../components/Features';
+// Assuming you have a Testimonials component
+// import Testimonials from '../components/Testimonials';
 
-// Placeholder components for other sections (you can create these files later)
-const Features = () => (
-  <div className="py-16 bg-white">
-    <div className="container mx-auto px-6 text-center">
-      <h2 className="text-3xl font-bold">Why Choose BankConverts?</h2>
-      {/* Feature list would go here */}
-    </div>
-  </div>
-);
-
-const Testimonials = () => (
-  <div className="py-16 bg-gray-50">
-    <div className="container mx-auto px-6 text-center">
-      <h2 className="text-3xl font-bold">Trusted by Professionals</h2>
-      {/* Testimonial cards would go here */}
-    </div>
-  </div>
-);
-
-const HomePage = () => {
-  return (
-    <>
+      {/* 2. Add the Seo component with page-specific content */}
       <Seo 
-        title="BankConverts | The #1 Bank Statement Converter"
-        description="Instantly convert any bank statement (PDF, Scanned Image) to Excel. Secure, fast, and 99% accurate. Trusted by CAs and businesses in India."
+        title="Instant Bank Statement to Excel Converter" 
+        description="Convert Indian bank statements to structured formats with BankConvert. Trusted by CAs and business owners for secure, accurate, and user-friendly financial tools."
+        keywords="bank statement converter, bank statement to excel, pdf to excel, convert bank statement"
+        canonicalUrl="https://www.bankconverts.com"
       />
 
-      {/* Hero Section */}
-      <div className="bg-gray-50 pt-24 pb-32">
-        <div className="container mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold text-gray-900">
-            Transform Statements. Unlock Data.
-          </h1>
-          <p className="mt-4 text-lg text-gray-600">
-            The fastest and most accurate way to convert bank statements to Excel.
-          </p>
-        </div>
+const HomePage = () => {
+  // 2. Define the state needed by the Converter component
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [pdfPassword, setPdfPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <>
+      <div className="text-center py-16 px-4">
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
+          Transform Statements. Unlock Data.
+        </h1>
+        <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
+          The fastest and most accurate way to convert bank statements to Excel.
+        </p>
       </div>
 
-      {/* Converter Component */}
-      <Converter />
-
-      {/* Other Sections */}
+      <div className="max-w-2xl mx-auto px-4">
+        {/* 3. Pass the state and setters as props to the Converter component */}
+        <Converter 
+          selectedFile={selectedFile}
+          setSelectedFile={setSelectedFile}
+          pdfPassword={pdfPassword}
+          setPdfPassword={setPdfPassword}
+          isLoading={isLoading}
+          setIsLoading={setIsLoading}
+          error={error}
+          setError={setError}
+        />
+      </div>
+      
+      {/* You can now include other sections of your landing page */}
       <Features />
-      <Testimonials />
+      {/* <Testimonials /> */}
     </>
   );
 };

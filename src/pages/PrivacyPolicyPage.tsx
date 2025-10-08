@@ -1,4 +1,16 @@
+// src/pages/PrivacyPolicyPage.tsx
+
 import React from 'react';
+import Seo from '../components/Seo'; // 1. Import the Seo component
+
+
+      {/* 2. Add the Seo component with page-specific content */}
+      <Seo 
+        title="BankConvert Privacy Policy – Your Data, Protected" 
+        description="Learn how BankConvert handles and protects your financial data. We prioritize privacy, encryption, and compliance with Indian financial regulations."
+        keywords="bankconvert privacy, data protection, fintech security, CA data handling"
+        canonicalUrl="https://www.bankconverts.com/privacy"
+      />
 
 function PrivacyPolicyPage(): React.JSX.Element {
   return (

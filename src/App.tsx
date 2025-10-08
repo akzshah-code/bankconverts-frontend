@@ -3,7 +3,7 @@
 import { Routes, Route } from 'react-router-dom';
 import PageLayout from './components/PageLayout';
 import LandingPage from './pages/LandingPage';
-import Converter from './components/Converter';
+import ConverterPage from './pages/ConverterPage';
 import PricingPage from './pages/PricingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -33,7 +33,7 @@ function App() {
           </Route>
 
           {/* Routes WITHOUT Header and Footer */}
-          <Route path="/app" element={<Converter />} />
+          <Route path="/app" element={<ConverterPage />} />
 
           {/* Protected Dashboard Route */}
           <Route

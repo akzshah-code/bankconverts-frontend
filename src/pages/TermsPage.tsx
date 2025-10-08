@@ -1,4 +1,14 @@
+
+import Seo from '../components/Seo'; // 1. Import the Seo component
 import React from 'react';
+
+      {/* 2. Add the Seo component with page-specific content */}
+      <Seo 
+        title="BankConvert Terms of Service – Legal & Usage Guidelines" 
+        description="Read our terms of service to understand your rights, responsibilities, and how we protect your financial data. BankConvert is built for secure, compliant usage."
+        keywords="bankconvert terms, fintech terms of service, data protection policy, CA compliance"
+        canonicalUrl="https://www.bankconverts.com/terms"
+      />
 
 const TermsPage = (): React.JSX.Element => {
   return (

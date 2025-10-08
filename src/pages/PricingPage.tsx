@@ -1,7 +1,16 @@
 // src/pages/PricingPage.tsx
 
+import Seo from '../components/Seo'; // 1. Import the Seo component
 import { useState } from 'react';
 import axios from 'axios'; // 1. Import axios here
+
+      {/* 2. Add the Seo component with page-specific content */}
+      <Seo 
+        title="BankConvert Pricing – Simple, Transparent Plans" 
+        description="Choose the right plan for your bank statement conversion needs. BankConvert offers clear pricing with no hidden fees—built for CAs, business owners, and finance teams."
+        keywords="bankconvert pricing, bank statement conversion plans, fintech pricing, CA tools"
+        canonicalUrl="https://www.bankconverts.com/pricing"
+      />
 
 const pricingData = {
   monthly: [
