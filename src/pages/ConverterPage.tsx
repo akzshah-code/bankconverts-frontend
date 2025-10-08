@@ -1,7 +1,6 @@
 // src/pages/ConverterPage.tsx
 
-import { useState } from 'react';
-import Converter from '../components/Converter';
+import FileUploader from '../components/FileUploader';
 import Seo from '../components/Seo'; // 1. Import the Seo component
 
 {/* 2. Add the Seo component with page-specific content */}
@@ -13,23 +12,14 @@ import Seo from '../components/Seo'; // 1. Import the Seo component
       />
 
 const ConverterPage = () => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [pdfPassword, setPdfPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
-      <Converter
-        selectedFile={selectedFile}
-        setSelectedFile={setSelectedFile}
-        pdfPassword={pdfPassword}
-        setPdfPassword={setPdfPassword}
-        isLoading={isLoading}
-        setIsLoading={setIsLoading}
-        error={error}
-        setError={setError}
-      />
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8 py-12">
+      {/* 
+        Since your FileUploader component handles everything internally 
+        (file selection, preview, and conversion), we can use it directly.
+        This simplifies the code and fixes the error.
+      */}
+      <FileUploader />
     </div>
   );
 };
