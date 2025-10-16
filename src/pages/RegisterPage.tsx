@@ -12,21 +12,35 @@ const RegisterPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
+  // Get the backend URL from environment variables
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
+
+    if (!apiUrl) {
+        setErrorMessage('API URL is not configured. Please contact support.');
+        return;
+    }
+
     if (password !== confirmPassword) {
       setErrorMessage("Passwords don't match!");
       return;
     }
+
     setIsLoading(true);
+
     try {
-      const response = await fetch('/api/register', {
+      // Use the correct, full URL for the API endpoint
+      const response = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
+
       const data = await response.json();
+
       if (response.ok) {
         alert('Registration successful! Please log in.');
         navigate('/login');
