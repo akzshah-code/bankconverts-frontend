@@ -1,9 +1,10 @@
 // src/pages/DashboardPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { authorizedFetch } from '../api/api'; // Import your authorizedFetch wrapper
 
-// Updated interface to match backend data
+// Interface for conversion history items
 interface Conversion {
   id: number;
   original_filename: string;
@@ -13,8 +14,9 @@ interface Conversion {
   target_format: string;
 }
 
+// Interface for the user's profile and history
 interface Profile {
-  email: string;
+  email: string; 
   history: Conversion[];
   roles: string[];
 }
@@ -23,56 +25,100 @@ function DashboardPage(): React.JSX.Element {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const { isAuthenticated, logout, token } = useAuth(); // Assuming token is available from your AuthContext
+  const [isConverting, setIsConverting] = useState<boolean>(false);
+  const { isAuthenticated, logout } = useAuth(); // Corrected: Removed 'user' which does not exist on the context type
   const navigate = useNavigate();
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+
+  // Function to fetch or refresh dashboard data
+  const fetchDashboardData = async () => {
+    try {
+      const response = await authorizedFetch('/api/dashboard/history');
+      
+      // **FIX:** Check if the response is defined before using it.
+      if (!response) {
+        // authorizedFetch already handled the redirect, so we can just stop execution.
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data.');
+      }
+      
+      const historyData: Conversion[] = await response.json();
+      
+      setProfile({
+          email: 'user@example.com', // Placeholder, as 'user' object is not available
+          roles: ['user'], // Placeholder
+          history: historyData
+      });
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+  
   useEffect(() => {
-    // If not authenticated, redirect to login page
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
 
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      try {
-        // Fetch conversion history from your Flask backend
-        const response = await fetch('/api/dashboard/history', {
-          headers: {
-            'Authorization': `Bearer ${token}` // Send the JWT token
-          }
-        });
+    setLoading(true);
+    fetchDashboardData().finally(() => setLoading(false));
+  }, [isAuthenticated, navigate]);
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch dashboard data. Please try again.');
-        }
+  // Handler for the File Conversion
+  const handleConvert = async () => {
+    if (!fileInputRef.current?.files?.length) {
+      setError('Please select a file to convert.');
+      return;
+    }
 
-        const historyData: Conversion[] = await response.json();
-        
-        // You might have another endpoint for user details, or get it from the auth context
-        // For now, we'll construct the profile object here
-        setProfile({
-            email: 'user@example.com', // Replace with actual user email from AuthContext or another API call
-            roles: ['user'], // Replace with actual roles
-            history: historyData
-        });
+    const file = fileInputRef.current.files[0];
+    const password = passwordInputRef.current?.value || '';
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    if (password) {
+      formData.append('password', password);
+    }
 
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+    setIsConverting(true);
+    setError(''); // Clear previous errors
+
+    try {
+      const response = await authorizedFetch('/api/extract', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      // **FIX:** Check if the response is defined before using it.
+      if (!response) {
+        return; 
       }
-    };
 
-    fetchDashboardData();
-  }, [isAuthenticated, navigate, token]);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred during conversion.' }));
+        throw new Error(errorData.message || 'Failed to extract data.');
+      }
+
+      const result = await response.json();
+      alert(result.message || 'Conversion successful!');
+      
+      // Refresh the dashboard data to show the new item
+      fetchDashboardData();
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsConverting(false);
+    }
+  };
 
   if (loading) {
     return <div className="text-center mt-10">Loading your dashboard...</div>;
-  }
-
-  if (error) {
-    return <div className="text-center mt-10 text-red-500">Error: {error}</div>;
   }
 
   return (
@@ -87,7 +133,35 @@ function DashboardPage(): React.JSX.Element {
         </button>
       </div>
 
+      {/* Conversion Section */}
       <div className="bg-white shadow-md rounded p-6 mb-8">
+        <h2 className="text-2xl font-semibold mb-4">Convert Your Bank Statement</h2>
+        <div className="space-y-4">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+            accept=".pdf,.jpg,.jpeg,.png"
+          />
+          <input
+            type="password"
+            ref={passwordInputRef}
+            placeholder="PDF Password (if any)"
+            className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+          <button
+            onClick={handleConvert}
+            disabled={isConverting}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-400"
+          >
+            {isConverting ? 'Converting...' : 'Convert to Excel'}
+          </button>
+          {error && <p className="text-red-500 text-center mt-2">{error}</p>}
+        </div>
+      </div>
+
+      {/* Conversion History Section */}
+      <div className="bg-white shadow-md rounded p-6">
         <h2 className="text-2xl font-semibold mb-4">Conversion History</h2>
         {profile && profile.history.length > 0 ? (
           <div className="overflow-x-auto">
@@ -118,7 +192,7 @@ function DashboardPage(): React.JSX.Element {
                     <td className="py-2 px-4">
                       {conv.status === 'completed' && conv.converted_filename ? (
                         <a 
-                          href={`/api/download/${conv.converted_filename}`} // Assuming a download endpoint
+                          href={`/api/download/${conv.converted_filename}`}
                           download
                           className="text-blue-500 hover:underline"
                         >
