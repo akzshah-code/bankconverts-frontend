@@ -1,3 +1,4 @@
+// src/api/api.ts
 /**
  * A wrapper for the fetch API that automatically adds the
  * JWT Authorization header to requests.
@@ -8,7 +9,7 @@
  * @param url The URL to fetch.
  * @param options The standard fetch options object.
  * @returns The fetch Response object.
- */
+*/
 export async function authorizedFetch(url: string, options: RequestInit = {}): Promise<Response | undefined> {
     const token = localStorage.getItem('accessToken');
   
@@ -38,4 +39,4 @@ export async function authorizedFetch(url: string, options: RequestInit = {}): P
   
     return response;
   }
-  
+ 
