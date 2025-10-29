@@ -2,17 +2,18 @@
 
 import { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 
-// Define the shape of the user object, which comes from your backend
+// Define the shape of the user object
 interface User {
     id: number;
     email: string;
     username: string;
 }
 
-// Define the context type, which now includes the user object
+// Define the context type, now including a convenient boolean flag
 interface AuthContextType {
     user: User | null;
     token: string | null;
+    isAuthenticated: boolean; // <-- FINAL FIX: Add boolean for easy checks
     login: (token: string, userData: User) => void;
     logout: () => void;
 }
@@ -20,15 +21,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    // State to hold both the token and the user data
-    const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+    const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
     const [user, setUser] = useState<User | null>(() => {
         const storedUser = localStorage.getItem('user');
         return storedUser ? JSON.parse(storedUser) : null;
     });
 
+    // This boolean is derived from the token's existence
+    const isAuthenticated = !!token;
+
     useEffect(() => {
-        // Persist token and user to localStorage
         if (token && user) {
             localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify(user));
@@ -49,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout }}>
+        <AuthContext.Provider value={{ user, token, isAuthenticated, login, logout }}>
             {children}
         </AuthContext.Provider>
     );
