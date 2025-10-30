@@ -20,30 +20,29 @@ const DashboardPage: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [isConverting, setIsConverting] = useState<boolean>(false);
     
-    // Get user, token, and authentication status from the context
-    const { isAuthenticated, user, token, logout } = useAuth();
+    // CORRECT: Get user and authentication status from the new context
+    const { isAuthenticated, user, logout } = useAuth();
     const navigate = useNavigate();
 
     // Refs for direct access to file and password inputs
     const fileInputRef = useRef<HTMLInputElement>(null);
     const passwordInputRef = useRef<HTMLInputElement>(null);
 
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
 
     // Function to fetch the user's conversion history
     const fetchHistory = useCallback(async () => {
-        if (!token) return;
+        if (!isAuthenticated) return;
         try {
-            const response = await fetch(`${apiUrl}/api/history`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            // CORRECT: No 'Authorization' header needed
+            const response = await fetch(`${apiUrl}/api/history`);
             if (!response.ok) throw new Error('Failed to fetch conversion history.');
             const data: Conversion[] = await response.json();
             setHistory(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         } catch (err: any) {
             setError(err.message);
         }
-    }, [token, apiUrl]);
+    }, [isAuthenticated, apiUrl]);
 
     // Initial load effect
     useEffect(() => {
@@ -55,7 +54,7 @@ const DashboardPage: React.FC = () => {
         fetchHistory().finally(() => setLoading(false));
     }, [isAuthenticated, navigate, fetchHistory]);
 
-    // --- MAIN FIX: Handler for the file conversion submission ---
+    // Handler for the file conversion submission
     const handleConvert = async () => {
         const file = fileInputRef.current?.files?.[0];
         if (!file) {
@@ -63,8 +62,7 @@ const DashboardPage: React.FC = () => {
             return;
         }
 
-        // Ensure token exists before making the API call
-        if (!token) {
+        if (!isAuthenticated) {
             setError('Authentication error. Please log in again.');
             navigate('/login');
             return;
@@ -79,18 +77,14 @@ const DashboardPage: React.FC = () => {
         setError('');
 
         try {
+            // CORRECT: No 'Authorization' header needed
             const response = await fetch(`${apiUrl}/api/extract`, {
                 method: 'POST',
-                headers: {
-                    // This is the critical line that sends the authentication token
-                    'Authorization': `Bearer ${token}`
-                },
                 body: formData,
             });
             
             const result = await response.json();
             if (!response.ok) {
-                // Use the error message from the backend if available
                 throw new Error(result.error || 'Conversion failed.');
             }
             
@@ -108,14 +102,13 @@ const DashboardPage: React.FC = () => {
     
     // Handler for securely downloading a converted file
     const handleDownload = async (filename: string) => {
-        if (!token) {
+        if (!isAuthenticated) {
             setError("Authentication error. Please log in again.");
             return;
         }
         try {
-            const response = await fetch(`${apiUrl}/api/download/${filename}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            // CORRECT: No 'Authorization' header needed
+            const response = await fetch(`${apiUrl}/api/download/${filename}`);
 
             if (!response.ok) throw new Error('Download failed.');
             
@@ -140,7 +133,8 @@ const DashboardPage: React.FC = () => {
         <div className="container mx-auto p-4 md:p-6 bg-gray-50 min-h-screen">
             <header className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-                    {user ? `Welcome, ${user.username}!` : 'Dashboard'}
+                    {/* CORRECT: Use 'user.email' from the new context */}
+                    {user ? `Welcome, ${user.email}!` : 'Dashboard'}
                 </h1>
                 <button 
                     onClick={() => { logout(); navigate('/login'); }} 
@@ -211,3 +205,4 @@ const DashboardPage: React.FC = () => {
 };
 
 export default DashboardPage;
+

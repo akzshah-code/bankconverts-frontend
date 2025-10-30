@@ -1,26 +1,31 @@
 // src/context/AuthContext.tsx
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+// Define the shape of the user data
+interface User {
+  id: number;
+  email: string;
+}
 
 // Define the shape of the context data
 interface AuthContextType {
   isAuthenticated: boolean;
+  user: User | null;
   login: () => void;
   logout: () => void;
   isLoading: boolean;
 }
 
-// Create the context with a default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Define the AuthProvider component
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Start loading until we verify the session
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
-  // This function checks if a valid session cookie exists
   const checkLoginStatus = async () => {
     setIsLoading(true);
     try {
@@ -28,13 +33,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
+
       if (response.ok) {
+        const data = await response.json();
         setIsAuthenticated(true);
+        setUser(data.user);
       } else {
         setIsAuthenticated(false);
+        setUser(null);
       }
     } catch (error) {
       setIsAuthenticated(false);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -45,28 +55,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = () => {
-    // After a successful login API call, we just update the state.
-    // The browser handles the cookie automatically.
-    setIsAuthenticated(true);
+    // After a successful login, we re-check the status to fetch user data
+    checkLoginStatus();
   };
 
   const logout = async () => {
     try {
       await fetch(`${apiUrl}/api/logout`, { method: 'POST' });
     } finally {
-      // Always update state, even if the API call fails
       setIsAuthenticated(false);
+      setUser(null);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

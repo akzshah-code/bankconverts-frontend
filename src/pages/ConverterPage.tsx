@@ -13,13 +13,13 @@ const ConverterPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
 
-    const { isAuthenticated, token } = useAuth();
+    // CORRECT: Only need 'isAuthenticated' from the new context
+    const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
 
-    // --- Core Logic for Handling File Selection ---
     const handleFileSelect = (selectedFile: File | null) => {
         if (selectedFile) {
             const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
@@ -32,7 +32,6 @@ const ConverterPage: React.FC = () => {
         }
     };
     
-    // --- Handlers for Drag-and-Drop ---
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         if (isAuthenticated) setIsDragOver(true);
@@ -50,12 +49,10 @@ const ConverterPage: React.FC = () => {
         }
     };
 
-    // --- Handler for the "Choose File" button click ---
     const onBrowseFileClick = () => {
         if (isAuthenticated) fileInputRef.current?.click();
     };
 
-    // --- Handler for the "Start Over" button ---
     const handleReset = () => {
         setFile(null);
         setPassword('');
@@ -66,10 +63,9 @@ const ConverterPage: React.FC = () => {
         }
     };
 
-    // --- Handler for API call to convert the file ---
     const handleConvert = useCallback(async () => {
         if (!file) return;
-        if (!isAuthenticated || !token) {
+        if (!isAuthenticated) {
             setError('Please log in to use the converter.');
             return;
         }
@@ -83,9 +79,9 @@ const ConverterPage: React.FC = () => {
         if (password) formData.append('password', password);
 
         try {
+            // CORRECT: No 'Authorization' header needed
             const response = await fetch(`${apiUrl}/api/extract`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData,
             });
 
@@ -95,9 +91,8 @@ const ConverterPage: React.FC = () => {
             setMessage('Conversion successful! Download will begin shortly.');
             
             if (data.downloadUrl) {
-                const downloadResponse = await fetch(`${apiUrl}${data.downloadUrl}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                // CORRECT: No 'Authorization' header needed
+                const downloadResponse = await fetch(`${apiUrl}${data.downloadUrl}`);
                 if (!downloadResponse.ok) throw new Error('Failed to download file.');
                 
                 const blob = await downloadResponse.blob();
@@ -108,23 +103,21 @@ const ConverterPage: React.FC = () => {
                 document.body.appendChild(link);
                 link.click();
                 link.parentNode?.removeChild(link);
-                handleReset(); // Reset form after successful download
+                handleReset(); 
             }
         } catch (err: any) {
             setError(err.message);
         } finally {
             setIsLoading(false);
         }
-    }, [file, password, token, isAuthenticated, apiUrl]);
+    }, [file, password, isAuthenticated, apiUrl]);
 
-    // --- UI Rendering ---
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
                 <h1 className="text-3xl font-bold text-center text-gray-800">Convert Your Bank Statement</h1>
                 <p className="text-center text-gray-500">AI-powered, fast, and secure. Upload a PDF or image to get a clean Excel file.</p>
 
-                {/* --- File Uploader Container with Conditional Logic --- */}
                 <div className="relative">
                     {!isAuthenticated && (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-lg z-10">
@@ -170,8 +163,8 @@ const ConverterPage: React.FC = () => {
                     </div>
                 )}
                 
-                {message && <p className="text-center text-green-600">{message}</p>}
-                {error && <p className="text-center text-red-600">{error}</p>}
+                {message && <p className="text-center text-green-600 mt-4">{message}</p>}
+                {error && <p className="text-center text-red-600 mt-4">{error}</p>}
             </div>
         </div>
     );
