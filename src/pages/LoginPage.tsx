@@ -4,17 +4,14 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const LoginPage: React.FC = () => {
+const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    
-    // --- CRITICAL FIX: Use the 'login' function from our corrected AuthContext ---
     const { login } = useAuth();
     const navigate = useNavigate();
-
-    const apiUrl = import.meta.env.VITE_API_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
+    const apiUrl = import.meta.env.VITE_API_URL;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,7 +19,7 @@ const LoginPage: React.FC = () => {
         setError('');
 
         try {
-            const response = await fetch(`${apiUrl}/api/auth/login`, {
+            const response = await fetch(`${apiUrl}/api/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -34,18 +31,14 @@ const LoginPage: React.FC = () => {
                 throw new Error(data.message || 'Login failed. Please check your credentials.');
             }
 
-            // --- THIS IS THE KEY ---
-            // Call the context's login function, which handles saving the token
-            // and updating the global state correctly.
-            if (data.access_token) {
-                login(data.access_token);
-                navigate('/app'); // Redirect to the main converter page on success
-            } else {
-                throw new Error('Login successful, but no access token received.');
-            }
+            // --- THE CORRECT LOGIC ---
+            // On success, call the context's login function and navigate.
+            // The browser has already received and stored the session cookie.
+            login();
+            navigate('/app'); // Redirect to the main converter page
 
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message || 'An unexpected error occurred.');
         } finally {
             setIsLoading(false);
         }
@@ -114,4 +107,3 @@ const LoginPage: React.FC = () => {
 };
 
 export default LoginPage;
-
