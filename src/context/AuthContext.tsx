@@ -3,63 +3,90 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
+// Interface for the user object, decoded from the token
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  is_admin: boolean;
+}
+
+// Interface for the decoded JWT payload
+interface DecodedToken {
+  sub: User;
+  exp: number;
+}
+
+// COMPLETE interface for the context's value
 interface AuthContextType {
   isAuthenticated: boolean;
-  isLoading: boolean;
+  user: User | null;
+  token: string | null;
   login: (token: string) => void;
   logout: () => void;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface DecodedToken {
-  exp: number;
-}
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Start in a loading state
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This effect runs once when the provider mounts
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      try {
-        const decodedToken = jwtDecode<DecodedToken>(token);
-        // Check if the token is expired
+    try {
+      const storedToken = localStorage.getItem('authToken');
+      if (storedToken) {
+        const decodedToken: DecodedToken = jwtDecode(storedToken);
+        
         if (decodedToken.exp * 1000 > Date.now()) {
-          setIsAuthenticated(true);
+          setToken(storedToken);
+          setUser(decodedToken.sub);
         } else {
-          // Token is expired, remove it
-          localStorage.removeItem('access_token');
-          setIsAuthenticated(false);
+          localStorage.removeItem('authToken');
         }
-      } catch (error) {
-        console.error("Invalid token found in localStorage", error);
-        localStorage.removeItem('access_token');
-        setIsAuthenticated(false);
       }
+    } catch (error) {
+      localStorage.removeItem('authToken');
+      console.error("Failed to process token on initial load:", error);
+    } finally {
+      setIsLoading(false);
     }
-    // Finished checking, set loading to false
-    setIsLoading(false);
   }, []);
 
-  const login = (token: string) => {
-    localStorage.setItem('access_token', token);
-    setIsAuthenticated(true);
+  const login = (newToken: string) => {
+    try {
+      const decodedToken: DecodedToken = jwtDecode(newToken);
+      localStorage.setItem('authToken', newToken);
+      setToken(newToken);
+      setUser(decodedToken.sub);
+    } catch (error) {
+      console.error("Failed to process token on login:", error);
+      logout();
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    setIsAuthenticated(false);
+    localStorage.removeItem('authToken');
+    setToken(null);
+    setUser(null);
   };
 
-  const value = {
+  const isAuthenticated = !!token;
+
+  const value: AuthContextType = {
     isAuthenticated,
-    isLoading,
+    user,
+    token,
     login,
     logout,
+    isLoading,
   };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen"><p>Loading application...</p></div>;
+  }
 
   return (
     <AuthContext.Provider value={value}>
@@ -68,7 +95,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// Custom hook to use the auth context easily
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
