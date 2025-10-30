@@ -1,117 +1,117 @@
+// src/pages/LoginPage.tsx
 
-import Seo from '../components/Seo'; // 1. Import the Seo component
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-      {/* 2. Add the Seo component with page-specific content */}
-      <Seo 
-        title="Login to BankConvert – Secure Access to Your Account" 
-        description="Sign in to your BankConvert dashboard to convert statements, manage invoices, and access premium features. Your data is protected with enterprise-grade security."
-        keywords="bankconvert login, secure bank statement converter, fintech login, CA dashboard"
-        canonicalUrl="https://www.bankconverts.com/login"
-      />
+const LoginPage: React.FC = () => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    
+    // --- CRITICAL FIX: Use the 'login' function from our corrected AuthContext ---
+    const { login } = useAuth();
+    const navigate = useNavigate();
 
-const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const navigate = useNavigate();
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setErrorMessage('');
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError('');
 
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${apiUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
+        try {
+            const response = await fetch(`${apiUrl}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
 
-      // --- ADD THIS LINE FOR DEBUGGING ---
-      console.log('Data received from login API:', data); 
-      // -------------------------------------
+            const data = await response.json();
 
-      if (response.ok) {
-        localStorage.setItem('access_token', data.access_token);
-        alert('Login successful!');
-        navigate('/app');
-      } else {
-        setErrorMessage(data.message || 'Login failed. Please check your credentials.');
-      }
-    } catch (error) {
-      setErrorMessage('An error occurred during login. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+            if (!response.ok) {
+                throw new Error(data.message || 'Login failed. Please check your credentials.');
+            }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <h2 className="text-center text-3xl font-extrabold text-gray-900 mt-6">
-          Sign in to your account
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Or{' '}
-          <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-            start for free by creating a new account
-          </Link>
-        </p>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <input
-              id="email-address"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300"
-              placeholder="Email address"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
-            <div className="relative">
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                required
-                autoComplete="current-password"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300"
-                placeholder="Password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
+            // --- THIS IS THE KEY ---
+            // Call the context's login function, which handles saving the token
+            // and updating the global state correctly.
+            if (data.access_token) {
+                login(data.access_token);
+                navigate('/app'); // Redirect to the main converter page on success
+            } else {
+                throw new Error('Login successful, but no access token received.');
+            }
+
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-100">
+            <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
+                <h2 className="text-3xl font-bold text-center text-gray-800">Sign In</h2>
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                    <div>
+                        <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                            Email address
+                        </label>
+                        <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                            Password
+                        </label>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            autoComplete="current-password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    {error && (
+                        <p className="text-sm text-red-600 text-center">{error}</p>
+                    )}
+
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400"
+                        >
+                            {isLoading ? 'Signing In...' : 'Sign In'}
+                        </button>
+                    </div>
+                </form>
+                <p className="text-sm text-center text-gray-600">
+                    Don't have an account?{' '}
+                    <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                        Sign up
+                    </Link>
+                </p>
             </div>
-          </div>
-          {errorMessage && (
-            <div className="text-red-500 text-sm text-center py-2">{errorMessage}</div>
-          )}
-          <button
-            type="submit"
-            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Signing In...' : 'Sign in'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+        </div>
+    );
 };
 
 export default LoginPage;
+
