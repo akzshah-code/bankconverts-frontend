@@ -21,6 +21,11 @@ const LoginPage = () => {
         try {
             const response = await fetch(`${apiUrl}/api/login`, {
                 method: 'POST',
+                // --- THE FINAL, CRITICAL FIX ---
+                // This tells the browser to include the session cookie in the request
+                // and to correctly handle the one it receives back on success.
+                credentials: 'include',
+                // ---------------------------------
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
             });
@@ -31,9 +36,7 @@ const LoginPage = () => {
                 throw new Error(data.message || 'Login failed. Please check your credentials.');
             }
 
-            // --- THE CORRECT LOGIC ---
-            // On success, call the context's login function and navigate.
-            // The browser has already received and stored the session cookie.
+            // On success, update the global auth state and redirect.
             login();
             navigate('/app'); // Redirect to the main converter page
 

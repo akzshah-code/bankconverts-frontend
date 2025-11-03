@@ -2,7 +2,8 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+// REMOVED: useNavigate is no longer used in this component
+// import { useNavigate } from 'react-router-dom'; 
 import { UploadCloud, File as FileIcon, X } from 'lucide-react';
 
 const ConverterPage: React.FC = () => {
@@ -12,43 +13,27 @@ const ConverterPage: React.FC = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
-
-    // Get isAuthenticated flag and a function to update it from the context
+    
     const { isAuthenticated, login, logout } = useAuth();
-    const navigate = useNavigate();
+    // REMOVED: The navigate constant is no longer needed
+    // const navigate = useNavigate(); 
     const fileInputRef = useRef<HTMLInputElement>(null);
-
     const apiUrl = import.meta.env.VITE_API_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
 
-    // NEW: This useEffect hook runs when the page loads to check if the user
-    // has a valid session cookie with the backend.
     useEffect(() => {
         const checkAuthStatus = async () => {
-            // No need to check if the user is already marked as authenticated in the app
-            if (isAuthenticated) {
-                return;
-            }
+            if (isAuthenticated) return;
             try {
-                const response = await fetch(`${apiUrl}/api/status`, {
-                    // This is CRITICAL: it tells the browser to send the session cookie
-                    credentials: 'include',
-                });
-
-                if (response.ok) {
-                    // The backend confirmed the user is logged in. Update our app's state.
-                    login();
-                } else {
-                    // If the backend says we're not logged in, ensure our state reflects that.
-                    logout();
-                }
+                const response = await fetch(`${apiUrl}/api/status`, { credentials: 'include' });
+                if (response.ok) login();
+                else logout();
             } catch (err) {
-                console.error('Failed to check authentication status:', err);
-                logout(); // If the check fails, assume logged out
+                console.error('Failed to check auth status:', err);
+                logout();
             }
         };
-
         checkAuthStatus();
-    }, [isAuthenticated, login, logout, apiUrl]); // Dependencies for the effect
+    }, [isAuthenticated, login, logout, apiUrl]);
 
     const handleFileSelect = (selectedFile: File | null) => {
         if (selectedFile) {
@@ -62,68 +47,43 @@ const ConverterPage: React.FC = () => {
         }
     };
     
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        if (isAuthenticated) setIsDragOver(true);
-    };
-    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        setIsDragOver(false);
-    };
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(true); };
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(false); };
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         setIsDragOver(false);
-        if (isAuthenticated && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             handleFileSelect(e.dataTransfer.files[0]);
             e.dataTransfer.clearData();
         }
     };
 
-    const onBrowseFileClick = () => {
-        if (isAuthenticated) fileInputRef.current?.click();
-    };
-
     const handleReset = () => {
-        setFile(null);
-        setPassword('');
-        setMessage('');
-        setError('');
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        }
+        setFile(null); setPassword(''); setMessage(''); setError('');
+        if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
     const handleConvert = useCallback(async () => {
-        if (!file || !isAuthenticated) return;
-
-        setIsLoading(true);
-        setError('');
-        setMessage('');
-
+        if (!file) return;
+        setIsLoading(true); setError(''); setMessage('');
         const formData = new FormData();
         formData.append('file', file);
         if (password) formData.append('password', password);
 
         try {
-            // UPDATED: Using '/api/extract' and sending credentials
             const response = await fetch(`${apiUrl}/api/extract`, {
                 method: 'POST',
-                credentials: 'include', // Send the session cookie
+                credentials: 'include',
                 body: formData,
             });
 
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Conversion failed.');
-            
             setMessage('Conversion successful! Download will begin shortly.');
             
             if (data.downloadUrl) {
-                // UPDATED: Sending credentials for the download request as well
-                const downloadResponse = await fetch(`${apiUrl}${data.downloadUrl}`, {
-                    credentials: 'include',
-                });
+                const downloadResponse = await fetch(`${apiUrl}${data.downloadUrl}`, { credentials: 'include' });
                 if (!downloadResponse.ok) throw new Error('Failed to download file.');
-                
                 const blob = await downloadResponse.blob();
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -139,36 +99,25 @@ const ConverterPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [file, password, isAuthenticated, apiUrl]);
+    }, [file, password, apiUrl]);
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
                 <h1 className="text-3xl font-bold text-center text-gray-800">Convert Your Bank Statement</h1>
                 <p className="text-center text-gray-500">AI-powered, fast, and secure. Upload a PDF or image to get a clean Excel file.</p>
-
                 <div className="relative">
-                    {!isAuthenticated && (
-                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-lg z-10">
-                            <p className="text-gray-700 font-semibold mb-4">Please log in to use the converter.</p>
-                            <button onClick={() => navigate('/login')} className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">Sign In</button>
-                        </div>
-                    )}
-                    
                     {!file ? (
                         <div
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={handleDrop}
-                            onClick={onBrowseFileClick}
-                            className={`flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-lg transition-colors ${!isAuthenticated ? 'cursor-not-allowed bg-gray-100' : 'cursor-pointer'} ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}
+                            onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}
+                            className={`flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}
                         >
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <UploadCloud className={`w-10 h-10 mb-4 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
                                 <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
                                 <p className="text-xs text-gray-500">PDF, PNG, JPG (MAX. 10MB)</p>
                             </div>
-                            <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => handleFileSelect(e.target.files?.[0] || null)} accept=".pdf,.png,.jpg,.jpeg" disabled={!isAuthenticated} />
+                            <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => handleFileSelect(e.target.files?.[0] || null)} accept=".pdf,.png,.jpg,.jpeg" />
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center w-full h-56 border-2 border-solid border-green-500 bg-green-50 rounded-lg p-4">
@@ -179,7 +128,6 @@ const ConverterPage: React.FC = () => {
                         </div>
                     )}
                 </div>
-
                 {file && (
                     <div className="space-y-4 pt-4">
                         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="PDF Password (if any)" className="w-full px-4 py-2 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -191,7 +139,6 @@ const ConverterPage: React.FC = () => {
                         </div>
                     </div>
                 )}
-                
                 {message && <p className="text-center text-green-600 mt-4">{message}</p>}
                 {error && <p className="text-center text-red-600 mt-4">{error}</p>}
             </div>
