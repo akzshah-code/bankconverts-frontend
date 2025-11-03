@@ -33,7 +33,7 @@ const RegisterPage = () => {
 
     try {
       // Use the correct, full URL for the API endpoint
-      const response = await fetch(`${apiUrl}/api/register`, {
+      const response = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
