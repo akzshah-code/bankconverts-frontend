@@ -1,6 +1,6 @@
 // src/pages/ConverterPage.tsx
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { UploadCloud, File as FileIcon, X } from 'lucide-react';
@@ -13,12 +13,42 @@ const ConverterPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
 
-    // CORRECT: Only need 'isAuthenticated' from the new context
-    const { isAuthenticated } = useAuth();
+    // Get isAuthenticated flag and a function to update it from the context
+    const { isAuthenticated, login, logout } = useAuth();
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const apiUrl = import.meta.env.VITE_API_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
+
+    // NEW: This useEffect hook runs when the page loads to check if the user
+    // has a valid session cookie with the backend.
+    useEffect(() => {
+        const checkAuthStatus = async () => {
+            // No need to check if the user is already marked as authenticated in the app
+            if (isAuthenticated) {
+                return;
+            }
+            try {
+                const response = await fetch(`${apiUrl}/api/status`, {
+                    // This is CRITICAL: it tells the browser to send the session cookie
+                    credentials: 'include',
+                });
+
+                if (response.ok) {
+                    // The backend confirmed the user is logged in. Update our app's state.
+                    login();
+                } else {
+                    // If the backend says we're not logged in, ensure our state reflects that.
+                    logout();
+                }
+            } catch (err) {
+                console.error('Failed to check authentication status:', err);
+                logout(); // If the check fails, assume logged out
+            }
+        };
+
+        checkAuthStatus();
+    }, [isAuthenticated, login, logout, apiUrl]); // Dependencies for the effect
 
     const handleFileSelect = (selectedFile: File | null) => {
         if (selectedFile) {
@@ -64,11 +94,7 @@ const ConverterPage: React.FC = () => {
     };
 
     const handleConvert = useCallback(async () => {
-        if (!file) return;
-        if (!isAuthenticated) {
-            setError('Please log in to use the converter.');
-            return;
-        }
+        if (!file || !isAuthenticated) return;
 
         setIsLoading(true);
         setError('');
@@ -79,9 +105,10 @@ const ConverterPage: React.FC = () => {
         if (password) formData.append('password', password);
 
         try {
-            // CORRECT: No 'Authorization' header needed
+            // UPDATED: Using '/api/extract' and sending credentials
             const response = await fetch(`${apiUrl}/api/extract`, {
                 method: 'POST',
+                credentials: 'include', // Send the session cookie
                 body: formData,
             });
 
@@ -91,8 +118,10 @@ const ConverterPage: React.FC = () => {
             setMessage('Conversion successful! Download will begin shortly.');
             
             if (data.downloadUrl) {
-                // CORRECT: No 'Authorization' header needed
-                const downloadResponse = await fetch(`${apiUrl}${data.downloadUrl}`);
+                // UPDATED: Sending credentials for the download request as well
+                const downloadResponse = await fetch(`${apiUrl}${data.downloadUrl}`, {
+                    credentials: 'include',
+                });
                 if (!downloadResponse.ok) throw new Error('Failed to download file.');
                 
                 const blob = await downloadResponse.blob();
