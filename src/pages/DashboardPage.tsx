@@ -118,9 +118,7 @@ const DashboardPage: React.FC = () => {
         }
         try {
             // CORRECT: No 'Authorization' header needed
-            const response = await fetch(`${apiUrl}/api/download/${filename}`);
-
-
+            const response = await fetch(`${apiUrl}/api/download/${filename}`, { credentials: 'include' });
             if (!response.ok) throw new Error('Download failed.');
             
             const blob = await response.blob();
