@@ -2,8 +2,6 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-// REMOVED: useNavigate is no longer used in this component
-// import { useNavigate } from 'react-router-dom'; 
 import { UploadCloud, File as FileIcon, X } from 'lucide-react';
 
 const ConverterPage: React.FC = () => {
@@ -15,8 +13,6 @@ const ConverterPage: React.FC = () => {
     const [isDragOver, setIsDragOver] = useState(false);
     
     const { isAuthenticated, login, logout } = useAuth();
-    // REMOVED: The navigate constant is no longer needed
-    // const navigate = useNavigate(); 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const apiUrl = import.meta.env.VITE_API_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
 
@@ -71,28 +67,28 @@ const ConverterPage: React.FC = () => {
         if (password) formData.append('password', password);
 
         try {
-            const response = await fetch(`${apiUrl}/api/extract`, {
+            // Step 1: Upload file and start conversion
+            const extractResponse = await fetch(`${apiUrl}/api/extract`, {
                 method: 'POST',
                 credentials: 'include',
                 body: formData,
             });
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Conversion failed.');
-            setMessage('Conversion successful! Download will begin shortly.');
+            const extractData = await extractResponse.json();
+            if (!extractResponse.ok) throw new Error(extractData.error || 'Conversion failed.');
+            setMessage('Conversion successful! Preparing download...');
             
-            if (data.downloadUrl) {
-                const downloadResponse = await fetch(`${apiUrl}${data.downloadUrl}`, { credentials: 'include' });
-                if (!downloadResponse.ok) throw new Error('Failed to download file.');
-                const blob = await downloadResponse.blob();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', data.downloadUrl.split('/').pop() || 'converted-file.xlsx');
-                document.body.appendChild(link);
-                link.click();
-                link.parentNode?.removeChild(link);
-                handleReset(); 
+            // Step 2: Use the returned URL to fetch the signed GCS URL
+            if (extractData.downloadUrl) {
+                const signedUrlResponse = await fetch(`${apiUrl}${extractData.downloadUrl}`, { credentials: 'include' });
+                const signedUrlData = await signedUrlResponse.json();
+
+                if (!signedUrlResponse.ok) throw new Error(signedUrlData.error || 'Failed to get download link.');
+
+                // Step 3: Redirect the browser to the signed URL to trigger the download
+                window.location.href = signedUrlData.signedUrl;
+                
+                handleReset(); // Reset the form after successful download starts
             }
         } catch (err: any) {
             setError(err.message);
@@ -102,6 +98,7 @@ const ConverterPage: React.FC = () => {
     }, [file, password, apiUrl]);
 
     return (
+        // ... JSX remains exactly the same ...
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
                 <h1 className="text-3xl font-bold text-center text-gray-800">Convert Your Bank Statement</h1>
