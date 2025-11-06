@@ -24,7 +24,7 @@ const DashboardPage: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const passwordInputRef = useRef<HTMLInputElement>(null);
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'https://bankconverts-backend-499324155791.asia-south1.run.app';
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
     const fetchHistory = useCallback(async () => {
         if (!isAuthenticated) return;
