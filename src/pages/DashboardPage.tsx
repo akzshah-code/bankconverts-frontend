@@ -29,6 +29,7 @@ const DashboardPage: React.FC = () => {
     const fetchHistory = useCallback(async () => {
         if (!isAuthenticated) return;
         try {
+            // ALREADY CORRECT FROM PREVIOUS STEP
             const response = await fetch(`${apiUrl}/api/history`, { credentials: 'include' });
             if (!response.ok) throw new Error('Failed to fetch conversion history.');
             const data: Conversion[] = await response.json();
@@ -61,6 +62,7 @@ const DashboardPage: React.FC = () => {
         setError('');
 
         try {
+            // ALREADY CORRECT FROM PREVIOUS STEP
             const extractResponse = await fetch(`${apiUrl}/api/extract`, {
                 method: 'POST',
                 credentials: 'include',
@@ -73,6 +75,7 @@ const DashboardPage: React.FC = () => {
             alert('Conversion successful! Preparing download...');
 
             if (extractData.downloadUrl) {
+                // ALREADY CORRECT FROM PREVIOUS STEP
                 const signedUrlResponse = await fetch(`${apiUrl}${extractData.downloadUrl}`, { credentials: 'include' });
                 const signedUrlData = await signedUrlResponse.json();
 
@@ -94,6 +97,7 @@ const DashboardPage: React.FC = () => {
     const handleDownload = async (conversionId: number) => {
         if (!isAuthenticated) { setError("Authentication error. Please log in again."); return; }
         try {
+            // ALREADY CORRECT FROM PREVIOUS STEP
             const response = await fetch(`${apiUrl}/api/download/${conversionId}`, { credentials: 'include' });
             const data = await response.json();
 

@@ -20,9 +20,13 @@ const ConverterPage: React.FC = () => {
         const checkAuthStatus = async () => {
             if (isAuthenticated) return;
             try {
+                // ADDED: credentials: 'include'
                 const response = await fetch(`${apiUrl}/api/status`, { credentials: 'include' });
-                if (response.ok) login();
-                else logout();
+                if (response.ok) {
+                    login();
+                } else {
+                    logout();
+                }
             } catch (err) {
                 console.error('Failed to check auth status:', err);
                 logout();
@@ -67,9 +71,9 @@ const ConverterPage: React.FC = () => {
         if (password) formData.append('password', password);
 
         try {
-            // Step 1: Upload file and start conversion
             const extractResponse = await fetch(`${apiUrl}/api/extract`, {
                 method: 'POST',
+                // ADDED: credentials: 'include'
                 credentials: 'include',
                 body: formData,
             });
@@ -78,17 +82,16 @@ const ConverterPage: React.FC = () => {
             if (!extractResponse.ok) throw new Error(extractData.error || 'Conversion failed.');
             setMessage('Conversion successful! Preparing download...');
             
-            // Step 2: Use the returned URL to fetch the signed GCS URL
             if (extractData.downloadUrl) {
+                // ALREADY CORRECT FROM PREVIOUS STEP
                 const signedUrlResponse = await fetch(`${apiUrl}${extractData.downloadUrl}`, { credentials: 'include' });
                 const signedUrlData = await signedUrlResponse.json();
 
                 if (!signedUrlResponse.ok) throw new Error(signedUrlData.error || 'Failed to get download link.');
 
-                // Step 3: Redirect the browser to the signed URL to trigger the download
                 window.location.href = signedUrlData.signedUrl;
                 
-                handleReset(); // Reset the form after successful download starts
+                handleReset();
             }
         } catch (err: any) {
             setError(err.message);
@@ -98,7 +101,6 @@ const ConverterPage: React.FC = () => {
     }, [file, password, apiUrl]);
 
     return (
-        // ... JSX remains exactly the same ...
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
                 <h1 className="text-3xl font-bold text-center text-gray-800">Convert Your Bank Statement</h1>
