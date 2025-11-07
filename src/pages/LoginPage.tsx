@@ -1,108 +1,86 @@
 // src/pages/LoginPage.tsx
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react'; // <-- IMPORT THE ICONS
 
-const LoginPage = () => {
+const LoginPage: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false); // <-- ADD STATE FOR VISIBILITY
+
     const { login } = useAuth();
     const navigate = useNavigate();
     const apiUrl = import.meta.env.VITE_API_URL;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
+        setLoading(true);
         setError('');
 
         try {
             const response = await fetch(`${apiUrl}/api/login`, {
                 method: 'POST',
-                // --- THE FINAL, CRITICAL FIX ---
-                // This tells the browser to include the session cookie in the request
-                // and to correctly handle the one it receives back on success.
-                credentials: 'include',
-                // ---------------------------------
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({ email, password }),
             });
 
             const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Login failed. Please check your credentials.');
-            }
-
-            // On success, update the global auth state and redirect.
+            if (!response.ok) throw new Error(data.error || 'Login failed');
+            
             login();
-            navigate('/app'); // Redirect to the main converter page
+            navigate('/app');
 
         } catch (err: any) {
-            setError(err.message || 'An unexpected error occurred.');
+            setError(err.message);
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-lg">
-                <h2 className="text-3xl font-bold text-center text-gray-800">Sign In</h2>
-                <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+            <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+                <h2 className="text-2xl font-bold text-center">Sign In</h2>
+                {error && <p className="text-red-500 text-center">{error}</p>}
+                <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                            Email address
-                        </label>
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            autoComplete="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        />
+                        <label htmlFor="email" className="text-sm font-medium text-gray-700">Email address</label>
+                        <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                     </div>
-
-                    <div>
-                        <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                            Password
-                        </label>
-                        <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            autoComplete="current-password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    {/* START: PASSWORD INPUT WITH TOGGLE */}
+                    <div className="relative">
+                        <label htmlFor="password" className="text-sm font-medium text-gray-700">Password</label>
+                        <input 
+                            id="password" 
+                            type={showPassword ? 'text' : 'password'} // <-- DYNAMIC TYPE
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)} 
+                            required 
+                            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
-                    </div>
-
-                    {error && (
-                        <p className="text-sm text-red-600 text-center">{error}</p>
-                    )}
-
-                    <div>
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400"
+                        <button 
+                            type="button" 
+                            onClick={() => setShowPassword(!showPassword)} 
+                            className="absolute inset-y-0 right-0 top-6 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
                         >
-                            {isLoading ? 'Signing In...' : 'Sign In'}
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                    </div>
+                    {/* END: PASSWORD INPUT WITH TOGGLE */}
+                    <div>
+                        <button type="submit" disabled={loading} className="w-full px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400">
+                            {loading ? 'Signing In...' : 'Sign In'}
                         </button>
                     </div>
                 </form>
                 <p className="text-sm text-center text-gray-600">
-                    Don't have an account?{' '}
-                    <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-                        Sign up
-                    </Link>
+                    Don't have an account? <Link to="/register" className="font-medium text-blue-600 hover:underline">Sign up</Link>
                 </p>
             </div>
         </div>
