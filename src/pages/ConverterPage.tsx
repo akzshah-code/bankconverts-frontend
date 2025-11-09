@@ -14,7 +14,6 @@ const ConverterPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     
-    // --- isAuthenticated is now the source of truth ---
     const { isAuthenticated, login, logout } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
@@ -80,9 +79,6 @@ const ConverterPage: React.FC = () => {
 
         try {
             let extractResponse;
-            // --- THIS IS THE KEY LOGIC ---
-            // If the user is authenticated, use the secure fetch.
-            // Otherwise, use the standard fetch for anonymous access.
             if (isAuthenticated) {
                 extractResponse = await authorizedFetch(`${apiUrl}/api/extract`, {
                     method: 'POST',
@@ -94,32 +90,29 @@ const ConverterPage: React.FC = () => {
                     body: formData,
                 });
             }
-            // ---------------------------------
 
-            if (!extractResponse) throw new Error('Authentication failed.');
+            if (!extractResponse) throw new Error('Authentication failed during extract.');
 
             const extractData = await extractResponse.json();
             if (!extractResponse.ok) throw new Error(extractData.error || 'Conversion failed.');
             setMessage('Conversion successful! Preparing download...');
             
-            // The backend returns file_id for both user types
             if (extractData.file_id) {
                 let downloadResponse;
-                // --- AND AGAIN FOR THE DOWNLOAD ---
+                // --- THIS IS THE CORRECTED LOGIC ---
                 if (isAuthenticated) {
                     downloadResponse = await authorizedFetch(`${apiUrl}/api/download/${extractData.file_id}`);
                 } else {
-                    // Anonymous users must also use the download endpoint
+                    // Anonymous users must also use a standard fetch call
                     downloadResponse = await fetch(`${apiUrl}/api/download/${extractData.file_id}`);
                 }
-                // ---------------------------------
+                // ------------------------------------
                 
                 if (!downloadResponse) throw new Error('Download authorization failed.');
 
                 const downloadData = await downloadResponse.json();
                 if (!downloadResponse.ok) throw new Error(downloadData.error || 'Failed to get download link.');
 
-                // Redirect to the signed URL to start the download
                 window.location.href = downloadData.signed_url; 
                 
                 handleReset();
@@ -132,7 +125,7 @@ const ConverterPage: React.FC = () => {
     }, [file, password, apiUrl, isAuthenticated]);
 
     return (
-        // ... the rest of your JSX remains unchanged ...
+        // ... your JSX remains unchanged ...
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
                 <h1 className="text-3xl font-bold text-center text-gray-800">Convert Your Bank Statement</h1>
