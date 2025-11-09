@@ -2,17 +2,19 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { UploadCloud, File as FileIcon, X, Eye, EyeOff } from 'lucide-react'; // <-- IMPORT THE ICONS
+import { UploadCloud, File as FileIcon, X, Eye, EyeOff } from 'lucide-react';
+import { authorizedFetch } from '../api/api';
 
 const ConverterPage: React.FC = () => {
     const [file, setFile] = useState<File | null>(null);
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false); // <-- ADD STATE FOR VISIBILITY
+    const [showPassword, setShowPassword] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     
+    // --- isAuthenticated is now the source of truth ---
     const { isAuthenticated, login, logout } = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
@@ -20,17 +22,22 @@ const ConverterPage: React.FC = () => {
     useEffect(() => {
         const checkAuthStatus = async () => {
             if (isAuthenticated) return;
-            try {
-                // ADDED: credentials: 'include'
-                const response = await fetch(`${apiUrl}/api/status`, { credentials: 'include' });
-                if (response.ok) {
-                    login();
-                } else {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                try {
+                    const response = await fetch(`${apiUrl}/api/status`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        login();
+                    } else {
+                        localStorage.removeItem('accessToken');
+                        logout();
+                    }
+                } catch (err) {
+                    console.error('Failed to check auth status:', err);
                     logout();
                 }
-            } catch (err) {
-                console.error('Failed to check auth status:', err);
-                logout();
             }
         };
         checkAuthStatus();
@@ -72,25 +79,48 @@ const ConverterPage: React.FC = () => {
         if (password) formData.append('password', password);
 
         try {
-            const extractResponse = await fetch(`${apiUrl}/api/extract`, {
-                method: 'POST',
-                // ADDED: credentials: 'include'
-                credentials: 'include',
-                body: formData,
-            });
+            let extractResponse;
+            // --- THIS IS THE KEY LOGIC ---
+            // If the user is authenticated, use the secure fetch.
+            // Otherwise, use the standard fetch for anonymous access.
+            if (isAuthenticated) {
+                extractResponse = await authorizedFetch(`${apiUrl}/api/extract`, {
+                    method: 'POST',
+                    body: formData,
+                });
+            } else {
+                extractResponse = await fetch(`${apiUrl}/api/extract`, {
+                    method: 'POST',
+                    body: formData,
+                });
+            }
+            // ---------------------------------
+
+            if (!extractResponse) throw new Error('Authentication failed.');
 
             const extractData = await extractResponse.json();
             if (!extractResponse.ok) throw new Error(extractData.error || 'Conversion failed.');
             setMessage('Conversion successful! Preparing download...');
             
-            if (extractData.downloadUrl) {
-                // ALREADY CORRECT FROM PREVIOUS STEP
-                const signedUrlResponse = await fetch(`${apiUrl}${extractData.downloadUrl}`, { credentials: 'include' });
-                const signedUrlData = await signedUrlResponse.json();
+            // The backend returns file_id for both user types
+            if (extractData.file_id) {
+                let downloadResponse;
+                // --- AND AGAIN FOR THE DOWNLOAD ---
+                if (isAuthenticated) {
+                    downloadResponse = await authorizedFetch(`${apiUrl}/api/download/${extractData.file_id}`);
+                } else {
+                    // Anonymous users must also use the download endpoint
+                    downloadResponse = await fetch(`${apiUrl}/api/download/${extractData.file_id}`);
+                }
+                // ---------------------------------
+                
+                if (!downloadResponse) throw new Error('Download authorization failed.');
 
-                if (!signedUrlResponse.ok) throw new Error(signedUrlData.error || 'Failed to get download link.');
+                const downloadData = await downloadResponse.json();
+                if (!downloadResponse.ok) throw new Error(downloadData.error || 'Failed to get download link.');
 
-                window.location.href = signedUrlData.signedUrl;
+                // Redirect to the signed URL to start the download
+                window.location.href = downloadData.signed_url; 
                 
                 handleReset();
             }
@@ -99,9 +129,10 @@ const ConverterPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [file, password, apiUrl]);
+    }, [file, password, apiUrl, isAuthenticated]);
 
     return (
+        // ... the rest of your JSX remains unchanged ...
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
                 <h1 className="text-3xl font-bold text-center text-gray-800">Convert Your Bank Statement</h1>
@@ -130,10 +161,9 @@ const ConverterPage: React.FC = () => {
                 </div>
                 {file && (
                     <div className="space-y-4 pt-4">
-                        {/* START: PDF PASSWORD INPUT WITH TOGGLE */}
                         <div className="relative">
                             <input 
-                                type={showPassword ? 'text' : 'password'} // <-- DYNAMIC TYPE
+                                type={showPassword ? 'text' : 'password'}
                                 value={password} 
                                 onChange={(e) => setPassword(e.target.value)} 
                                 placeholder="PDF Password (if any)" 
@@ -148,7 +178,6 @@ const ConverterPage: React.FC = () => {
                                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                             </button>
                         </div>
-                        {/* END: PDF PASSWORD INPUT WITH TOGGLE */}
                         
                         <div className="flex items-center gap-4">
                             <button onClick={handleReset} className="w-1/3 px-4 py-2 font-bold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Start Over</button>
