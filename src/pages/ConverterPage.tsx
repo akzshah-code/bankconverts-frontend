@@ -1,5 +1,3 @@
-// src/pages/AdminPage.tsx
-
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UploadCloud, File as FileIcon, X, Eye, EyeOff } from 'lucide-react';
@@ -22,23 +20,20 @@ const ConverterPage: React.FC = () => {
     const checkAuthStatus = async () => {
       if (isAuthenticated) return;
       try {
-        // Optional auth: do not redirect or alert if not logged in.
-        const response = await apiFetch(`${apiUrl}/api/status`, {}, 'optional');
-        if (response.ok) {
-          const data = await response.json();
+        const r = await apiFetch(`${apiUrl}/api/status`, {}, 'optional');
+        if (r.ok) {
+          const data = await r.json().catch(() => ({}));
           if (data?.logged_in) login();
         }
-      } catch {
-        // Silent fail for anonymous users
-      }
+      } catch { /* silent for anonymous */ }
     };
     checkAuthStatus();
   }, [isAuthenticated, login, apiUrl]);
 
   const handleFileSelect = (selectedFile: File | null) => {
     if (selectedFile) {
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-      if (allowedTypes.includes(selectedFile.type)) {
+      const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (allowed.includes(selectedFile.type)) {
         setFile(selectedFile);
         setError('');
       } else {
@@ -63,35 +58,61 @@ const ConverterPage: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Resolve possible id keys from backend
+  const getResultId = (data: any): string | number | undefined => {
+    return data?.file_id ?? data?.id ?? data?.result_id ?? data?.fileId ?? data?.upload_id;
+  };
+
+  // Poll /download until signed_url is available (up to ~90s)
+  const pollDownload = async (id: string | number) => {
+    const maxAttempts = 12;      // ~90s total with capped backoff
+    let attempt = 0;
+    let delay = 1500;            // start at 1.5s
+    const maxDelay = 10000;      // cap at 10s
+
+    while (attempt < maxAttempts) {
+      try {
+        const resp = await apiFetch(`${apiUrl}/api/download/${id}`, {}, 'optional');
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok && data?.signed_url) {
+          return data.signed_url as string;
+        }
+        // Retry on 404/409/423 or missing url
+      } catch {
+        // swallow and retry
+      }
+      attempt += 1;
+      await new Promise(res => setTimeout(res, delay));
+      delay = Math.min(maxDelay, Math.floor(delay * 1.6));
+    }
+    throw new Error('Could not generate download link. Please try again in a moment.');
+  };
+
   const handleConvert = useCallback(async () => {
     if (!file) return;
     setIsLoading(true); setError(''); setMessage('');
-
     const formData = new FormData();
     formData.append('file', file);
     if (password) formData.append('password', password);
 
     try {
-      // Optional auth so anonymous users are allowed.
       const extractResponse = await apiFetch(`${apiUrl}/api/extract`, {
         method: 'POST',
         body: formData,
       }, 'optional');
 
-      const extractData = await extractResponse.json();
+      const extractData = await extractResponse.json().catch(() => ({}));
       if (!extractResponse.ok) throw new Error(extractData?.error || 'Conversion failed.');
 
-      setMessage('Conversion successful! Preparing download...');
-
-      if (extractData?.file_id) {
-        const downloadResponse = await apiFetch(`${apiUrl}/api/download/${extractData.file_id}`, {}, 'optional');
-        const downloadData = await downloadResponse.json();
-        if (!downloadResponse.ok) throw new Error(downloadData?.error || 'Failed to get download link.');
-
-        // Start the download
-        window.location.href = downloadData.signed_url;
-        handleReset();
+      const id = getResultId(extractData);
+      if (!id) {
+        throw new Error('No file identifier returned from server. Please try again.');
       }
+
+      setMessage('Conversion successful! Preparing download...');
+      const url = await pollDownload(id);
+      window.location.href = url;
+      handleReset();
     } catch (err: any) {
       setError(err?.message || 'Something went wrong.');
     } finally {
@@ -104,6 +125,7 @@ const ConverterPage: React.FC = () => {
       <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
         <h1 className="text-3xl font-bold text-center text-gray-800">Convert Your Bank Statement</h1>
         <p className="text-center text-gray-500">AI-powered, fast, and secure. Upload a PDF or image to get a clean Excel file.</p>
+
         <div className="relative">
           {!file ? (
             <div
