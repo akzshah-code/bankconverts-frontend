@@ -21,21 +21,12 @@ const ConverterPage: React.FC = () => {
     useEffect(() => {
         const checkAuthStatus = async () => {
             if (isAuthenticated) return;
-            const token = localStorage.getItem('accessToken');
-            if (token) {
-                try {
-                    const response = await fetch(`${apiUrl}/api/status`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (response.ok) {
-                        login();
-                    } else {
-                        localStorage.removeItem('accessToken');
-                        logout();
-                    }
-                } catch (err) {
-                    console.error('Failed to check auth status:', err);
-                    logout();
+            // Tell authorizedFetch that auth is NOT required for this status check.
+            const response = await authorizedFetch(`${apiUrl}/api/status`, {}, false);
+            if (response?.ok) {
+                const data = await response.json();
+                if (data.logged_in) {
+                    login();
                 }
             }
         };
@@ -78,37 +69,25 @@ const ConverterPage: React.FC = () => {
         if (password) formData.append('password', password);
 
         try {
-            let extractResponse;
-            if (isAuthenticated) {
-                extractResponse = await authorizedFetch(`${apiUrl}/api/extract`, {
-                    method: 'POST',
-                    body: formData,
-                });
-            } else {
-                extractResponse = await fetch(`${apiUrl}/api/extract`, {
-                    method: 'POST',
-                    body: formData,
-                });
-            }
+            // --- THIS IS THE FINAL LOGIC ---
+            // Always use authorizedFetch, but tell it auth is optional.
+            // If a token exists, it will be sent. If not, the request will be anonymous.
+            const extractResponse = await authorizedFetch(`${apiUrl}/api/extract`, {
+                method: 'POST',
+                body: formData,
+            }, false); // <-- false means auth is optional
 
-            if (!extractResponse) throw new Error('Authentication failed during extract.');
+            if (!extractResponse) throw new Error('Request failed.');
 
             const extractData = await extractResponse.json();
             if (!extractResponse.ok) throw new Error(extractData.error || 'Conversion failed.');
             setMessage('Conversion successful! Preparing download...');
             
             if (extractData.file_id) {
-                let downloadResponse;
-                // --- THIS IS THE CORRECTED LOGIC ---
-                if (isAuthenticated) {
-                    downloadResponse = await authorizedFetch(`${apiUrl}/api/download/${extractData.file_id}`);
-                } else {
-                    // Anonymous users must also use a standard fetch call
-                    downloadResponse = await fetch(`${apiUrl}/api/download/${extractData.file_id}`);
-                }
-                // ------------------------------------
+                // Do the same for the download link.
+                const downloadResponse = await authorizedFetch(`${apiUrl}/api/download/${extractData.file_id}`, {}, false); // <-- false means auth is optional
                 
-                if (!downloadResponse) throw new Error('Download authorization failed.');
+                if (!downloadResponse) throw new Error('Download request failed.');
 
                 const downloadData = await downloadResponse.json();
                 if (!downloadResponse.ok) throw new Error(downloadData.error || 'Failed to get download link.');
@@ -122,7 +101,7 @@ const ConverterPage: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [file, password, apiUrl, isAuthenticated]);
+    }, [file, password, apiUrl]);
 
     return (
         // ... your JSX remains unchanged ...
