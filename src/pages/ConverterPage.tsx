@@ -1,169 +1,175 @@
-// src/pages/ConverterPage.tsx
+// src/pages/AdminPage.tsx
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UploadCloud, File as FileIcon, X, Eye, EyeOff } from 'lucide-react';
-import { authorizedFetch } from '../api/api';
+import { apiFetch } from '../api/api';
 
 const ConverterPage: React.FC = () => {
-    const [file, setFile] = useState<File | null>(null);
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [isDragOver, setIsDragOver] = useState(false);
-    
-    const { isAuthenticated, login, logout } = useAuth();
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
+  const [file, setFile] = useState<File | null>(null);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
-    useEffect(() => {
-        const checkAuthStatus = async () => {
-            if (isAuthenticated) return;
-            // Tell authorizedFetch that auth is NOT required for this status check.
-            const response = await authorizedFetch(`${apiUrl}/api/status`, {}, false);
-            if (response?.ok) {
-                const data = await response.json();
-                if (data.logged_in) {
-                    login();
-                }
-            }
-        };
-        checkAuthStatus();
-    }, [isAuthenticated, login, logout, apiUrl]);
+  const { isAuthenticated, login } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
-    const handleFileSelect = (selectedFile: File | null) => {
-        if (selectedFile) {
-            const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-            if (allowedTypes.includes(selectedFile.type)) {
-                setFile(selectedFile);
-                setError('');
-            } else {
-                setError('Invalid file type. Please upload a PDF, JPG, or PNG.');
-            }
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      if (isAuthenticated) return;
+      try {
+        // Optional auth: do not redirect or alert if not logged in.
+        const response = await apiFetch(`${apiUrl}/api/status`, {}, 'optional');
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.logged_in) login();
         }
+      } catch {
+        // Silent fail for anonymous users
+      }
     };
-    
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(true); };
-    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(false); };
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        setIsDragOver(false);
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFileSelect(e.dataTransfer.files[0]);
-            e.dataTransfer.clearData();
-        }
-    };
+    checkAuthStatus();
+  }, [isAuthenticated, login, apiUrl]);
 
-    const handleReset = () => {
-        setFile(null); setPassword(''); setMessage(''); setError('');
-        if (fileInputRef.current) fileInputRef.current.value = "";
-    };
+  const handleFileSelect = (selectedFile: File | null) => {
+    if (selectedFile) {
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (allowedTypes.includes(selectedFile.type)) {
+        setFile(selectedFile);
+        setError('');
+      } else {
+        setError('Invalid file type. Please upload a PDF, JPG, or PNG.');
+      }
+    }
+  };
 
-    const handleConvert = useCallback(async () => {
-        if (!file) return;
-        setIsLoading(true); setError(''); setMessage('');
-        const formData = new FormData();
-        formData.append('file', file);
-        if (password) formData.append('password', password);
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(true); };
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragOver(false); };
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileSelect(e.dataTransfer.files[0]);
+      e.dataTransfer.clearData();
+    }
+  };
 
-        try {
-            // --- THIS IS THE FINAL LOGIC ---
-            // Always use authorizedFetch, but tell it auth is optional.
-            // If a token exists, it will be sent. If not, the request will be anonymous.
-            const extractResponse = await authorizedFetch(`${apiUrl}/api/extract`, {
-                method: 'POST',
-                body: formData,
-            }, false); // <-- false means auth is optional
+  const handleReset = () => {
+    setFile(null); setPassword(''); setMessage(''); setError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
-            if (!extractResponse) throw new Error('Request failed.');
+  const handleConvert = useCallback(async () => {
+    if (!file) return;
+    setIsLoading(true); setError(''); setMessage('');
 
-            const extractData = await extractResponse.json();
-            if (!extractResponse.ok) throw new Error(extractData.error || 'Conversion failed.');
-            setMessage('Conversion successful! Preparing download...');
-            
-            if (extractData.file_id) {
-                // Do the same for the download link.
-                const downloadResponse = await authorizedFetch(`${apiUrl}/api/download/${extractData.file_id}`, {}, false); // <-- false means auth is optional
-                
-                if (!downloadResponse) throw new Error('Download request failed.');
+    const formData = new FormData();
+    formData.append('file', file);
+    if (password) formData.append('password', password);
 
-                const downloadData = await downloadResponse.json();
-                if (!downloadResponse.ok) throw new Error(downloadData.error || 'Failed to get download link.');
+    try {
+      // Optional auth so anonymous users are allowed.
+      const extractResponse = await apiFetch(`${apiUrl}/api/extract`, {
+        method: 'POST',
+        body: formData,
+      }, 'optional');
 
-                window.location.href = downloadData.signed_url; 
-                
-                handleReset();
-            }
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [file, password, apiUrl]);
+      const extractData = await extractResponse.json();
+      if (!extractResponse.ok) throw new Error(extractData?.error || 'Conversion failed.');
 
-    return (
-        // ... your JSX remains unchanged ...
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-            <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
-                <h1 className="text-3xl font-bold text-center text-gray-800">Convert Your Bank Statement</h1>
-                <p className="text-center text-gray-500">AI-powered, fast, and secure. Upload a PDF or image to get a clean Excel file.</p>
-                <div className="relative">
-                    {!file ? (
-                        <div
-                            onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}
-                            className={`flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}
-                        >
-                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <UploadCloud className={`w-10 h-10 mb-4 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
-                                <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p className="text-xs text-gray-500">PDF, PNG, JPG (MAX. 10MB)</p>
-                            </div>
-                            <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => handleFileSelect(e.target.files?.[0] || null)} accept=".pdf,.png,.jpg,.jpeg" />
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center w-full h-56 border-2 border-solid border-green-500 bg-green-50 rounded-lg p-4">
-                            <FileIcon className="w-10 h-10 mb-3 text-green-600" />
-                            <p className="font-semibold text-gray-700 truncate max-w-full px-2" title={file.name}>{file.name}</p>
-                            <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
-                            <button onClick={handleReset} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-                        </div>
-                    )}
-                </div>
-                {file && (
-                    <div className="space-y-4 pt-4">
-                        <div className="relative">
-                            <input 
-                                type={showPassword ? 'text' : 'password'}
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)} 
-                                placeholder="PDF Password (if any)" 
-                                className="w-full px-4 py-2 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                            />
-                            <button 
-                                type="button" 
-                                onClick={() => setShowPassword(!showPassword)} 
-                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
-                                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                            >
-                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                            </button>
-                        </div>
-                        
-                        <div className="flex items-center gap-4">
-                            <button onClick={handleReset} className="w-1/3 px-4 py-2 font-bold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Start Over</button>
-                            <button onClick={handleConvert} disabled={isLoading} className="w-2/3 px-4 py-2 font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
-                                {isLoading ? 'Converting...' : 'Convert to Excel'}
-                            </button>
-                        </div>
-                    </div>
-                )}
-                {message && <p className="text-center text-green-600 mt-4">{message}</p>}
-                {error && <p className="text-center text-red-600 mt-4">{error}</p>}
+      setMessage('Conversion successful! Preparing download...');
+
+      if (extractData?.file_id) {
+        const downloadResponse = await apiFetch(`${apiUrl}/api/download/${extractData.file_id}`, {}, 'optional');
+        const downloadData = await downloadResponse.json();
+        if (!downloadResponse.ok) throw new Error(downloadData?.error || 'Failed to get download link.');
+
+        // Start the download
+        window.location.href = downloadData.signed_url;
+        handleReset();
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Something went wrong.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [file, password, apiUrl]);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+      <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
+        <h1 className="text-3xl font-bold text-center text-gray-800">Convert Your Bank Statement</h1>
+        <p className="text-center text-gray-500">AI-powered, fast, and secure. Upload a PDF or image to get a clean Excel file.</p>
+        <div className="relative">
+          {!file ? (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`flex flex-col items-center justify-center w-full h-56 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'}`}
+            >
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <UploadCloud className={`w-10 h-10 mb-4 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
+                <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                <p className="text-xs text-gray-500">PDF, PNG, JPG (MAX. 10MB)</p>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+                accept=".pdf,.png,.jpg,.jpeg"
+              />
             </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center w-full h-56 border-2 border-solid border-green-500 bg-green-50 rounded-lg p-4">
+              <FileIcon className="w-10 h-10 mb-3 text-green-600" />
+              <p className="font-semibold text-gray-700 truncate max-w-full px-2" title={file.name}>{file.name}</p>
+              <p className="text-sm text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
+              <button onClick={handleReset} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+          )}
         </div>
-    );
+
+        {file && (
+          <div className="space-y-4 pt-4">
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="PDF Password (if any)"
+                className="w-full px-4 py-2 text-gray-700 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button onClick={handleReset} className="w-1/3 px-4 py-2 font-bold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Start Over</button>
+              <button onClick={handleConvert} disabled={isLoading} className="w-2/3 px-4 py-2 font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
+                {isLoading ? 'Converting...' : 'Convert to Excel'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {message && <p className="text-center text-green-600 mt-4">{message}</p>}
+        {error && <p className="text-center text-red-600 mt-4">{error}</p>}
+      </div>
+    </div>
+  );
 };
 
 export default ConverterPage;
