@@ -34,8 +34,7 @@ const ConverterPage: React.FC = () => {
     if (selectedFile) {
       const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
       if (allowed.includes(selectedFile.type)) {
-        setFile(selectedFile);
-        setError('');
+        setFile(selectedFile); setError('');
       } else {
         setError('Invalid file type. Please upload a PDF, JPG, or PNG.');
       }
@@ -58,60 +57,78 @@ const ConverterPage: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Resolve possible id keys from backend
-  const getResultId = (data: any): string | number | undefined => {
-    return data?.file_id ?? data?.id ?? data?.result_id ?? data?.fileId ?? data?.upload_id;
-  };
+  const getIdFromExtract = (data: any): string | number | undefined =>
+    data?.file_id ?? data?.id ?? data?.result_id ?? data?.fileId ?? data?.upload_id;
 
-  // Poll /download until signed_url is available (up to ~90s)
-  const pollDownload = async (id: string | number) => {
-    const maxAttempts = 12;      // ~90s total with capped backoff
-    let attempt = 0;
-    let delay = 1500;            // start at 1.5s
-    const maxDelay = 10000;      // cap at 10s
+  const getSignedFromDownload = (data: any): string | undefined =>
+    data?.signed_url ?? data?.signedUrl;
 
+  const normalizeUrl = (u: string) => u.startsWith('http') ? u : `${apiUrl}${u.startsWith('/') ? '' : '/'}${u}`;
+
+  const pollDownloadById = async (id: string | number) => {
+    const maxAttempts = 12;
+    let attempt = 0, delay = 1500;
     while (attempt < maxAttempts) {
       try {
         const resp = await apiFetch(`${apiUrl}/api/download/${id}`, {}, 'optional');
         const data = await resp.json().catch(() => ({}));
-        if (resp.ok && data?.signed_url) {
-          return data.signed_url as string;
-        }
-        // Retry on 404/409/423 or missing url
-      } catch {
-        // swallow and retry
-      }
+        const url = getSignedFromDownload(data);
+        if (resp.ok && url) return url;
+      } catch { /* ignore and retry */ }
       attempt += 1;
       await new Promise(res => setTimeout(res, delay));
-      delay = Math.min(maxDelay, Math.floor(delay * 1.6));
+      delay = Math.min(10000, Math.floor(delay * 1.6));
     }
     throw new Error('Could not generate download link. Please try again in a moment.');
+  };
+
+  const fetchSignedFromDownloadUrl = async (downloadUrl: string) => {
+    const target = normalizeUrl(downloadUrl);
+    // small retry loop even with direct URL
+    const maxAttempts = 8;
+    let attempt = 0, delay = 1200;
+    while (attempt < maxAttempts) {
+      try {
+        const resp = await apiFetch(target, {}, 'optional');
+        const data = await resp.json().catch(() => ({}));
+        const url = getSignedFromDownload(data);
+        if (resp.ok && url) return url;
+      } catch { /* ignore and retry */ }
+      attempt += 1;
+      await new Promise(res => setTimeout(res, delay));
+      delay = Math.min(8000, Math.floor(delay * 1.6));
+    }
+    throw new Error('Download link not ready yet. Please retry.');
   };
 
   const handleConvert = useCallback(async () => {
     if (!file) return;
     setIsLoading(true); setError(''); setMessage('');
+
     const formData = new FormData();
     formData.append('file', file);
     if (password) formData.append('password', password);
 
     try {
-      const extractResponse = await apiFetch(`${apiUrl}/api/extract`, {
-        method: 'POST',
-        body: formData,
-      }, 'optional');
+      const extractResp = await apiFetch(`${apiUrl}/api/extract`, { method: 'POST', body: formData }, 'optional');
+      const extractData = await extractResp.json().catch(() => ({}));
+      if (!extractResp.ok) throw new Error(extractData?.error || 'Conversion failed.');
 
-      const extractData = await extractResponse.json().catch(() => ({}));
-      if (!extractResponse.ok) throw new Error(extractData?.error || 'Conversion failed.');
+      // Prefer direct download URL if backend provides it
+      const directDownload = extractData?.downloadUrl ?? extractData?.download_url;
+      const id = getIdFromExtract(extractData);
 
-      const id = getResultId(extractData);
-      if (!id) {
+      if (!directDownload && !id) {
         throw new Error('No file identifier returned from server. Please try again.');
       }
 
       setMessage('Conversion successful! Preparing download...');
-      const url = await pollDownload(id);
-      window.location.href = url;
+
+      let signedUrl: string;
+      if (directDownload) signedUrl = await fetchSignedFromDownloadUrl(directDownload);
+      else signedUrl = await pollDownloadById(id!);
+
+      window.location.href = signedUrl;
       handleReset();
     } catch (err: any) {
       setError(err?.message || 'Something went wrong.');
@@ -140,13 +157,7 @@ const ConverterPage: React.FC = () => {
                 <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
                 <p className="text-xs text-gray-500">PDF, PNG, JPG (MAX. 10MB)</p>
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
-                accept=".pdf,.png,.jpg,.jpeg"
-              />
+              <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => handleFileSelect(e.target.files?.[0] || null)} accept=".pdf,.png,.jpg,.jpeg" />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center w-full h-56 border-2 border-solid border-green-500 bg-green-50 rounded-lg p-4">
