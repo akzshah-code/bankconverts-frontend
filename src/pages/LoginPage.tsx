@@ -12,7 +12,7 @@ const LoginPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false); // <-- ADD STATE FOR VISIBILITY
 
-    const { login } = useAuth();
+    const { refreshStatus } = useAuth();
     const navigate = useNavigate();
     const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -32,7 +32,7 @@ const LoginPage: React.FC = () => {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Login failed');
             
-            login();
+            await refreshStatus();
             navigate('/app');
 
         } catch (err: any) {
