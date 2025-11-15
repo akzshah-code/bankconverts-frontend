@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { UploadCloud, File as FileIcon, X, Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,26 +15,35 @@ const ConverterPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const { isAuthenticated, refreshStatus } = useAuth();
+  const { isAuthenticated, role, isLoading: authLoading, refreshStatus } = useAuth();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
-  // Optional: try to hydrate auth state if a session cookie already exists
+  // Try to hydrate session if there is a cookie (guest hitting /app after logging in elsewhere)
   useEffect(() => {
     const checkAuthStatus = async () => {
       if (isAuthenticated) return;
       try {
         const r = await apiFetch(`${apiUrl}/api/status`, {}, 'optional');
         if (r.ok) {
-          // Let AuthContext handle and normalize status
           await refreshStatus();
         }
       } catch {
-        // Silent: guests are allowed to use this page
+        // guest is allowed, so ignore errors
       }
     };
     checkAuthStatus();
   }, [isAuthenticated, refreshStatus, apiUrl]);
+
+  // If user is authenticated, immediately send them to dashboard/admin instead of showing converter
+  useEffect(() => {
+    if (authLoading) return;
+    if (isAuthenticated) {
+      const target = role === 'admin' ? '/admin' : '/dashboard';
+      navigate(target, { replace: true });
+    }
+  }, [authLoading, isAuthenticated, role, navigate]);
 
   const handleFileSelect = (selectedFile: File | null) => {
     if (selectedFile) {
