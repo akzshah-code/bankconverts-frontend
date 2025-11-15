@@ -1,3 +1,5 @@
+// src/pages/RegisterPage.tsx
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
@@ -12,16 +14,15 @@ const RegisterPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
-  // Get the backend URL from environment variables
-  const apiUrl = import.meta.env.VITE_API_URL;
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
 
     if (!apiUrl) {
-        setErrorMessage('API URL is not configured. Please contact support.');
-        return;
+      setErrorMessage('API URL is not configured. Please contact support.');
+      return;
     }
 
     if (password !== confirmPassword) {
@@ -32,10 +33,10 @@ const RegisterPage = () => {
     setIsLoading(true);
 
     try {
-      // Use the correct, full URL for the API endpoint
       const response = await fetch(`${apiUrl}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 

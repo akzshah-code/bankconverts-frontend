@@ -1,4 +1,5 @@
 // src/components/FileUploader.tsx
+
 import React, { useState } from 'react';
 import DataPreviewTable from './DataPreviewTable';
 import { UpgradeButton } from './UpgradeButton';
@@ -15,9 +16,12 @@ function FileUploader(): React.JSX.Element {
   const [extractedData, setExtractedData] = useState<Transaction[] | null>(null);
   const [showPreview, setShowPreview] = useState<boolean>(false);
 
+  const apiUrl = import.meta.env.VITE_API_URL;
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) setSelectedFile(event.target.files[0]);
   };
+
   const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(event.target.value);
   };
@@ -29,12 +33,12 @@ function FileUploader(): React.JSX.Element {
     }
     setIsProcessing(true);
     setError('');
+
     const formData = new FormData();
     formData.append('file', selectedFile);
     if (password) formData.append('password', password);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL;
       const extractResponse = await fetch(`${apiUrl}/extract`, {
         method: 'POST',
         body: formData,
@@ -44,7 +48,9 @@ function FileUploader(): React.JSX.Element {
       setExtractedData(data);
       setShowPreview(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      setError(
+        err instanceof Error ? err.message : 'An unknown error occurred.'
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -54,26 +60,29 @@ function FileUploader(): React.JSX.Element {
     setIsProcessing(true);
     setError('');
     try {
-      const apiUrl = import.meta.env.VITE_API_URL;
       const convertResponse = await fetch(`${apiUrl}/convert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ format: 'xlsx', data: editedData }),
       });
       if (!convertResponse.ok) throw new Error('Failed to convert data.');
+
       const blob = await convertResponse.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `transactions.xlsx`;
+      a.download = 'transactions.xlsx';
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(downloadUrl);
+
       setShowPreview(false);
       setExtractedData(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      setError(
+        err instanceof Error ? err.message : 'An unknown error occurred.'
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -87,13 +96,13 @@ function FileUploader(): React.JSX.Element {
 
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto p-6 bg-white rounded-xl shadow-xl">
-      {/* Main header and subheader */}
       <div className="text-center mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Convert Your Bank Statement</h2>
         <p className="mt-2 text-base text-gray-600">
           Upload a PDF or image file to get a clean Excel spreadsheet in seconds.
         </p>
       </div>
+
       {showPreview && extractedData ? (
         <DataPreviewTable
           initialData={extractedData}
@@ -115,7 +124,9 @@ function FileUploader(): React.JSX.Element {
             placeholder="PDF Password (if any)"
             className="block w-full border border-gray-300 rounded-md p-3"
           />
-          <div className="text-xs text-gray-400 mb-2">Supported formats: PDF, JPG, PNG </div>
+          <div className="text-xs text-gray-400 mb-2">
+            Supported formats: PDF, JPG, PNG
+          </div>
           <button
             onClick={handleUpload}
             disabled={isProcessing || !selectedFile}
@@ -123,27 +134,30 @@ function FileUploader(): React.JSX.Element {
           >
             {isProcessing ? 'Processing...' : 'Convert to Excel'}
           </button>
-      
+
           {error && (
             <div className="mt-4 text-center">
-            <p className="text-sm text-red-500">{error}</p>
-            {(error.toLowerCase().includes('expired') || error.toLowerCase().includes('upgrade')) && (
-            <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-              <h4 className="font-semibold mb-2">Choose a Plan to Continue</h4>
-              <div className="space-y-2">
-                <UpgradeButton 
-                  planId="plan_RPmoQl9lVpHzjt"
-                  buttonText="Starter Monthly - ₹975/mo"
-                />
-                <UpgradeButton 
-                  planId="plan_RPmvqA3nPDcVgN"
-                  buttonText="Starter Yearly - ₹9,750/yr (Save 16%)"
-                />
-              </div>
+              <p className="text-sm text-red-500">{error}</p>
+              {(error.toLowerCase().includes('expired') ||
+                error.toLowerCase().includes('upgrade')) && (
+                <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                  <h4 className="font-semibold mb-2">
+                    Choose a Plan to Continue
+                  </h4>
+                  <div className="space-y-2">
+                    <UpgradeButton
+                      planId="plan_RPmoQl9lVpHzjt"
+                      buttonText="Starter Monthly - ₹975/mo"
+                    />
+                    <UpgradeButton
+                      planId="plan_RPmvqA3nPDcVgN"
+                      buttonText="Starter Yearly - ₹9,750/yr (Save 16%)"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
         </div>
       )}
     </div>
