@@ -18,7 +18,7 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
   const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
@@ -77,7 +77,7 @@ const DashboardPage: React.FC = () => {
     <PageLayout>
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-          {/* Header */}
+          {/* Header (no Logout button here) */}
           <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
@@ -87,15 +87,6 @@ const DashboardPage: React.FC = () => {
                 Here&apos;s a summary of your account and recent activity.
               </p>
             </div>
-            <button
-              onClick={() => {
-                logout();
-                navigate('/login');
-              }}
-              className="self-start md:self-auto bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md"
-            >
-              Logout
-            </button>
           </header>
 
           {/* Summary cards */}

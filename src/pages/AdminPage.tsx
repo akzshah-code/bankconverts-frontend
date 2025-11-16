@@ -1,7 +1,6 @@
 // src/pages/AdminPage.tsx
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api/api';
 import PageLayout from '../components/PageLayout';
@@ -19,7 +18,6 @@ function AdminPage(): React.JSX.Element {
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
 
-  const { logout } = useAuth();
   const navigate = useNavigate();
   const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
@@ -133,7 +131,7 @@ function AdminPage(): React.JSX.Element {
   return (
     <PageLayout>
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
+        {/* Header (no Logout button here) */}
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
             <div>
@@ -144,12 +142,6 @@ function AdminPage(): React.JSX.Element {
                 Application overview and user management.
               </p>
             </div>
-            <button
-              onClick={logout}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md"
-            >
-              Logout
-            </button>
           </div>
         </header>
 
@@ -294,3 +286,4 @@ function AdminPage(): React.JSX.Element {
 }
 
 export default AdminPage;
+          
