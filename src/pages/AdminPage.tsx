@@ -9,7 +9,7 @@ interface User {
   id: number;
   email: string;
   subscription_plan: string;
-  usage: string;      // e.g. "120 / 500"
+  usage: string;
   plan_renews: string;
 }
 
@@ -31,11 +31,18 @@ function AdminPage(): React.JSX.Element {
           'required',
         );
 
+        if (response.status === 401) {
+          // Not logged in → send to login instead of blank screen
+          navigate('/login');
+          return;
+        }
+
         if (response.status === 403) {
           throw new Error(
-            'Access Denied: You do not have permission to view this page.',
+            'Access denied: you do not have permission to view this page.',
           );
         }
+
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
           throw new Error(data?.error || 'Failed to fetch user data.');
@@ -49,10 +56,6 @@ function AdminPage(): React.JSX.Element {
             ? err.message
             : 'An unknown error occurred.';
         setError(message);
-
-        if (message.toLowerCase().includes('unauthorized')) {
-          navigate('/login');
-        }
       } finally {
         setLoading(false);
       }
@@ -61,7 +64,6 @@ function AdminPage(): React.JSX.Element {
     fetchUsers();
   }, [navigate, apiUrl]);
 
-  // Derived metrics from users
   const metrics = useMemo(() => {
     const totalUsers = users.length;
 
@@ -80,7 +82,6 @@ function AdminPage(): React.JSX.Element {
       }
     });
 
-    // Simple plan distribution for the mini chart
     const planCounts: Record<string, number> = {};
     users.forEach((u) => {
       const plan = u.subscription_plan || 'Unknown';
@@ -91,7 +92,7 @@ function AdminPage(): React.JSX.Element {
       totalUsers,
       activeSubscriptions,
       totalPagesUsed,
-      monthlyRecurringRevenue: 0, // placeholder until backend exposes it
+      monthlyRecurringRevenue: 0,
       planCounts,
     };
   }, [users]);
@@ -106,17 +107,17 @@ function AdminPage(): React.JSX.Element {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="bg-white p-6 rounded-lg shadow-sm text-center max-w-md">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-6 rounded-lg shadow-sm max-w-md text-center">
           <h1 className="text-lg font-semibold text-red-600 mb-2">
-            Error loading admin dashboard
+            Admin dashboard error
           </h1>
           <p className="text-sm text-gray-700 mb-4">{error}</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/dashboard')}
             className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-semibold"
           >
-            Go to Home
+            Go to dashboard
           </button>
         </div>
       </div>
@@ -145,30 +146,10 @@ function AdminPage(): React.JSX.Element {
             Logout
           </button>
         </div>
-
-        {/* Tabs (only User Management active for now) */}
-        <div className="border-t border-gray-200 bg-white">
-          <div className="max-w-6xl mx-auto px-4">
-            <nav className="-mb-px flex space-x-6">
-              <span className="border-b-2 border-blue-600 py-3 text-sm font-medium text-blue-600">
-                User Management
-              </span>
-              <span className="py-3 text-sm font-medium text-gray-400 cursor-not-allowed">
-                Blog Management
-              </span>
-              <span className="py-3 text-sm font-medium text-gray-400 cursor-not-allowed">
-                Email Automations
-              </span>
-              <span className="py-3 text-sm font-medium text-gray-400 cursor-not-allowed">
-                Email Routing
-              </span>
-            </nav>
-          </div>
-        </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-        {/* Key metrics */}
+        {/* Key Metrics */}
         <section>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             Key Metrics
@@ -247,7 +228,7 @@ function AdminPage(): React.JSX.Element {
           )}
         </section>
 
-        {/* All users table */}
+        {/* All Users Table */}
         <section>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             All Users
@@ -273,9 +254,9 @@ function AdminPage(): React.JSX.Element {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 text-sm">
                 {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-gray-50 text-sm">
+                  <tr key={u.id} className="hover:bg-gray-50">
                     <td className="py-4 px-6">{u.email}</td>
                     <td className="py-4 px-6">{u.subscription_plan}</td>
                     <td className="py-4 px-6">{u.usage}</td>

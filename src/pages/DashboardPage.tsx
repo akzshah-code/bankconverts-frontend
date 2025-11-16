@@ -1,6 +1,6 @@
 // src/pages/DashboardPage.tsx
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -14,15 +14,13 @@ interface Conversion {
 
 const DashboardPage: React.FC = () => {
   const [history, setHistory] = useState<Conversion[]>([]);
-  const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
-  const [isConverting, setIsConverting] = useState<boolean>(false);
+
+  // Keep error only for internal logging; do not show scary red text on UI
+  const [error, setError] = useState<string>('');
 
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
@@ -32,7 +30,10 @@ const DashboardPage: React.FC = () => {
       const response = await fetch(`${apiUrl}/api/history`, {
         credentials: 'include',
       });
-      if (!response.ok) throw new Error('Failed to fetch conversion history.');
+      if (!response.ok) {
+        // Just log and fall back to "No Conversion History"
+        throw new Error('Failed to fetch conversion history.');
+      }
       const data: Conversion[] = await response.json();
       setHistory(
         data.sort(
@@ -41,7 +42,8 @@ const DashboardPage: React.FC = () => {
         ),
       );
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to load history.');
+      // history remains empty → UI will simply show "No Conversion History"
     }
   }, [isAuthenticated, apiUrl]);
 
@@ -53,87 +55,6 @@ const DashboardPage: React.FC = () => {
     setLoading(true);
     fetchHistory().finally(() => setLoading(false));
   }, [isAuthenticated, navigate, fetchHistory]);
-
-  const handleConvert = async () => {
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) {
-      setError('Please select a file to convert.');
-      return;
-    }
-    if (!isAuthenticated) {
-      setError('Authentication error. Please log in again.');
-      navigate('/login');
-      return;
-    }
-
-    const password = passwordInputRef.current?.value || '';
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('password', password);
-
-    setIsConverting(true);
-    setError('');
-
-    try {
-      const extractResponse = await fetch(`${apiUrl}/api/extract`, {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
-
-      const extractData = await extractResponse.json();
-      if (!extractResponse.ok)
-        throw new Error(extractData.error || 'Conversion failed.');
-
-      alert('Conversion successful! Preparing download...');
-
-      if (extractData.downloadUrl) {
-        const signedUrlResponse = await fetch(
-          `${apiUrl}${extractData.downloadUrl}`,
-          { credentials: 'include' },
-        );
-        const signedUrlData = await signedUrlResponse.json();
-
-        if (!signedUrlResponse.ok)
-          throw new Error(
-            signedUrlData.error || 'Failed to get download link.',
-          );
-        window.location.href = signedUrlData.signedUrl;
-      }
-
-      await fetchHistory();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsConverting(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      if (passwordInputRef.current) passwordInputRef.current.value = '';
-    }
-  };
-
-  const handleDownload = async (conversionId: number) => {
-    if (!isAuthenticated) {
-      setError('Authentication error. Please log in again.');
-      return;
-    }
-    try {
-      const response = await fetch(
-        `${apiUrl}/api/download/${conversionId}`,
-        { credentials: 'include' },
-      );
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.error || 'Download failed.');
-
-      if (data.signedUrl) {
-        window.location.href = data.signedUrl;
-      } else {
-        throw new Error('Download link could not be generated.');
-      }
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
 
   if (loading) {
     return (
@@ -212,16 +133,8 @@ const DashboardPage: React.FC = () => {
                 </span>
               </p>
             </div>
-            {/* Simple usage ring */}
             <div className="relative w-20 h-20">
               <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
-              <div
-                className="absolute inset-0 rounded-full border-4 border-blue-600"
-                style={{
-                  clipPath: 'polygon(50% 0, 100% 0, 100% 100%, 0 100%, 0 0)',
-                  opacity: usagePercent > 0 ? 1 : 0,
-                }}
-              />
               <div className="absolute inset-2 rounded-full bg-white flex items-center justify-center">
                 <span className="text-xs font-semibold text-gray-700">
                   {usagePercent}%
@@ -231,50 +144,28 @@ const DashboardPage: React.FC = () => {
           </div>
         </section>
 
-        {/* New Conversion */}
-        <section className="bg-white shadow-sm rounded-xl p-6 space-y-4">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900">
-            New Conversion
-          </h2>
-          <p className="text-sm text-gray-500">
-            Upload a bank statement (PDF or image) and download a clean Excel
-            file.
-          </p>
-          <div className="space-y-4">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".pdf,.jpg,.jpeg,.png"
-              className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            <input
-              type="password"
-              ref={passwordInputRef}
-              placeholder="PDF Password (if any)"
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <button
-              onClick={handleConvert}
-              disabled={isConverting}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg disabled:bg-gray-400 transition-colors"
-            >
-              {isConverting ? 'Processing...' : 'Convert to Excel'}
-            </button>
-            {error && (
-              <p className="text-red-500 text-center text-sm mt-2">
-                {error}
-              </p>
-            )}
-          </div>
-        </section>
-
-        {/* Conversion history */}
-        <section className="bg-white shadow-sm rounded-xl p-6 space-y-4">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900">
+        {/* Conversion history summary (no inline convert form) */}
+        <section className="bg-white rounded-xl shadow-sm p-6">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
             Conversion History
           </h2>
-          <div className="overflow-x-auto">
-            {history.length > 0 ? (
+          {history.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="mb-3 text-gray-400 text-3xl">📄</div>
+              <p className="font-medium text-gray-800">
+                No Conversion History
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Your past file conversions will appear here.
+              </p>
+              {error && (
+                <p className="text-xs text-red-400 mt-2">
+                  Note: history could not be loaded ({error}).
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto mt-4">
               <table className="min-w-full bg-white">
                 <thead className="bg-gray-100">
                   <tr>
@@ -287,17 +178,11 @@ const DashboardPage: React.FC = () => {
                     <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Action
-                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 text-sm">
                   {history.map((conv) => (
-                    <tr
-                      key={conv.id}
-                      className="hover:bg-gray-50 text-sm"
-                    >
+                    <tr key={conv.id} className="hover:bg-gray-50">
                       <td
                         className="py-3 px-4 whitespace-nowrap text-gray-800 truncate"
                         title={conv.original_filename}
@@ -320,29 +205,12 @@ const DashboardPage: React.FC = () => {
                           {conv.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap text-sm font-medium">
-                        {conv.status === 'completed' &&
-                        conv.converted_filename ? (
-                          <button
-                            onClick={() => handleDownload(conv.id)}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            Download
-                          </button>
-                        ) : (
-                          <span className="text-gray-400">N/A</span>
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <p className="text-center text-gray-500 py-4">
-                You have no conversion history yet.
-              </p>
-            )}
-          </div>
+            </div>
+          )}
         </section>
 
         {/* Quick actions */}
