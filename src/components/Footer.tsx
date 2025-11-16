@@ -9,8 +9,10 @@ const Footer = () => {
           <p>&copy; {new Date().getFullYear()} BankConverts. All rights reserved.</p>
           <div className="flex space-x-6">
             {/* 2. Use Link for internal pages */}
+            <Link to="/about" className="hover:text-gray-300">About</Link>
+            <Link to="/blog" className="hover:text-gray-300">Blog</Link>
             <Link to="/terms" className="hover:text-gray-300">Terms of Service</Link>
-            <Link to="/privacy" className="hover:text-gray-300">Privacy Policy</Link>
+            <Link to="/privacy" className="hover:text-gray-300">Privacy Policy</Link>        
             
             {/* 3. Keep standard <a> tag for external mailto link */}
             <a href="mailto:support@bankconverts.com" className="hover:text-gray-300">Contact</a>
