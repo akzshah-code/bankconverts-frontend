@@ -18,17 +18,11 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
-  const { isAuthenticated, user, role } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  // NEW: if admin somehow hits /dashboard, send them to /admin
-  useEffect(() => {
-    if (isAuthenticated && role === 'admin') {
-      navigate('/admin', { replace: true });
-    }
-  }, [isAuthenticated, role, navigate]);
-
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
+  const apiUrl =
+    import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
   const fetchHistory = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -43,11 +37,14 @@ const DashboardPage: React.FC = () => {
       setHistory(
         data.sort(
           (a, b) =>
-            new Date(b.date).getTime() - new Date(a.date).getTime(),
+            new Date(b.date).getTime() -
+            new Date(a.date).getTime(),
         ),
       );
     } catch (err: any) {
-      setError(err.message || 'Failed to load history.');
+      setError(
+        err?.message || 'Failed to load history.',
+      );
     }
   }, [isAuthenticated, apiUrl]);
 
@@ -76,7 +73,9 @@ const DashboardPage: React.FC = () => {
   const monthlyPageLimit = 500;
   const usagePercent =
     monthlyPageLimit > 0
-      ? Math.round((monthlyUsedPages / monthlyPageLimit) * 100)
+      ? Math.round(
+          (monthlyUsedPages / monthlyPageLimit) * 100,
+        )
       : 0;
   const renewalText = 'Renews 1 month from now';
 
@@ -84,14 +83,15 @@ const DashboardPage: React.FC = () => {
     <PageLayout>
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-          {/* Header (no Logout button here) */}
+          {/* Header */}
           <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                Welcome, {displayName}!
+                Welcome, {displayName.toUpperCase()}!
               </h1>
               <p className="text-sm text-gray-500">
-                Here&apos;s a summary of your account and recent activity.
+                Here&apos;s a summary of your account and recent
+                activity.
               </p>
             </div>
           </header>
@@ -106,7 +106,9 @@ const DashboardPage: React.FC = () => {
                 <p className="mt-2 text-xl font-semibold text-gray-900">
                   {currentPlan}
                 </p>
-                <p className="mt-1 text-sm text-gray-500">{renewalText}</p>
+                <p className="mt-1 text-sm text-gray-500">
+                  {renewalText}
+                </p>
               </div>
               <div className="mt-4">
                 <Link
@@ -148,7 +150,9 @@ const DashboardPage: React.FC = () => {
             </h2>
             {history.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="mb-3 text-gray-400 text-3xl">📄</div>
+                <div className="mb-3 text-gray-400 text-3xl">
+                  📄
+                </div>
                 <p className="font-medium text-gray-800">
                   No Conversion History
                 </p>
@@ -179,7 +183,10 @@ const DashboardPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-sm">
                     {history.map((conv) => (
-                      <tr key={conv.id} className="hover:bg-gray-50">
+                      <tr
+                        key={conv.id}
+                        className="hover:bg-gray-50"
+                      >
                         <td
                           className="py-3 px-4 whitespace-nowrap text-gray-800 truncate"
                           title={conv.original_filename}
@@ -187,7 +194,9 @@ const DashboardPage: React.FC = () => {
                           {conv.original_filename}
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap text-gray-500">
-                          {new Date(conv.date).toLocaleDateString()}
+                          {new Date(
+                            conv.date,
+                          ).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap">
                           <span
@@ -220,7 +229,9 @@ const DashboardPage: React.FC = () => {
                 to="/app"
                 className="block rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 px-4 py-3 text-center"
               >
-                <p className="font-semibold text-blue-700">Bulk Convert</p>
+                <p className="font-semibold text-blue-700">
+                  Bulk Convert
+                </p>
                 <p className="text-xs text-gray-500 mt-1">
                   Process multiple files at once.
                 </p>
@@ -229,7 +240,9 @@ const DashboardPage: React.FC = () => {
                 to="/pricing"
                 className="block rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 px-4 py-3 text-center"
               >
-                <p className="font-semibold text-blue-700">Upgrade Plan</p>
+                <p className="font-semibold text-blue-700">
+                  Upgrade Plan
+                </p>
                 <p className="text-xs text-gray-500 mt-1">
                   Get more pages and features.
                 </p>
@@ -238,7 +251,9 @@ const DashboardPage: React.FC = () => {
                 to="/faq"
                 className="block rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 px-4 py-3 text-center"
               >
-                <p className="font-semibold text-blue-700">View FAQ</p>
+                <p className="font-semibold text-blue-700">
+                  View FAQ
+                </p>
                 <p className="text-xs text-gray-500 mt-1">
                   Find answers to common questions.
                 </p>

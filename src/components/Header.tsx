@@ -88,14 +88,16 @@ const Header: React.FC = () => {
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/pricing', label: 'Pricing' },
     { to: '/blog', label: 'Blog' },
-    { to: '/app', label: 'Bulk Convert' },
+    { to: '/app', label: 'Convert' },
+    { to: '/bulk-convert', label: 'Bulk Convert' },
   ];
 
   const adminLinks: NavLink[] = [
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/pricing', label: 'Pricing' },
     { to: '/blog', label: 'Blog' },
-    { to: '/app', label: 'Bulk Convert' },
+    { to: '/app', label: 'Convert' },
+    { to: '/bulk-convert', label: 'Bulk Convert' },
     { to: '/admin', label: 'Admin', isHighlighted: true },
   ];
 
