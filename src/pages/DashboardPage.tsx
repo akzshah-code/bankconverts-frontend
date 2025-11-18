@@ -226,7 +226,7 @@ const DashboardPage: React.FC = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Link
-                to="/app"
+                to="/bulk-convert"
                 className="block rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 px-4 py-3 text-center"
               >
                 <p className="font-semibold text-blue-700">
