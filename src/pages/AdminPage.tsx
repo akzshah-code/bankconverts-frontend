@@ -14,9 +14,9 @@ import EmailRouting from '../components/admin/EmailRouting';
 interface User {
   id: number;
   email: string;
-  subscription_plan: string;
-  usage: string;
-  plan_renews: string;
+  subscription_plan: string | null;
+  usage: string | null;
+  plan_renews: string | null;
 }
 
 type AdminTab = 'users' | 'blog' | 'automations' | 'routing';
@@ -28,7 +28,8 @@ function AdminPage(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
 
   const navigate = useNavigate();
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
+  const apiUrl =
+    import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -52,11 +53,13 @@ function AdminPage(): React.JSX.Element {
 
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          throw new Error(data?.error || 'Failed to fetch user data.');
+          throw new Error(
+            (data as any)?.error || 'Failed to fetch user data.',
+          );
         }
 
         const data: User[] = await response.json();
-        setUsers(data);
+        setUsers(Array.isArray(data) ? data : []);
       } catch (err) {
         const message =
           err instanceof Error
@@ -72,36 +75,50 @@ function AdminPage(): React.JSX.Element {
   }, [navigate, apiUrl]);
 
   const metrics = useMemo(() => {
-    const totalUsers = users.length;
+    try {
+      const totalUsers = users.length;
 
-    const activeSubscriptions = users.filter(
-      (u) =>
-        u.subscription_plan &&
-        u.subscription_plan.toLowerCase() !== 'free',
-    ).length;
+      const activeSubscriptions = users.filter((u) => {
+        const plan = (u.subscription_plan || '').toLowerCase();
+        return plan !== '' && plan !== 'free';
+      }).length;
 
-    let totalPagesUsed = 0;
-    users.forEach((u) => {
-      const parts = u.usage.split('/');
-      if (parts.length >= 1) {
+      let totalPagesUsed = 0;
+      users.forEach((u) => {
+        const usageText =
+          typeof u.usage === 'string' && u.usage.trim() !== ''
+            ? u.usage
+            : '0';
+        const parts = usageText.split('/');
         const used = parseInt(parts[0].trim(), 10);
-        if (!Number.isNaN(used)) totalPagesUsed += used;
-      }
-    });
+        if (!Number.isNaN(used)) {
+          totalPagesUsed += used;
+        }
+      });
 
-    const planCounts: Record<string, number> = {};
-    users.forEach((u) => {
-      const plan = u.subscription_plan || 'Unknown';
-      planCounts[plan] = (planCounts[plan] || 0) + 1;
-    });
+      const planCounts: Record<string, number> = {};
+      users.forEach((u) => {
+        const plan = u.subscription_plan || 'Unknown';
+        planCounts[plan] = (planCounts[plan] || 0) + 1;
+      });
 
-    return {
-      totalUsers,
-      activeSubscriptions,
-      totalPagesUsed,
-      monthlyRecurringRevenue: 0,
-      planCounts,
-    };
+      return {
+        totalUsers,
+        activeSubscriptions,
+        totalPagesUsed,
+        monthlyRecurringRevenue: 0,
+        planCounts,
+      };
+    } catch (_err) {
+      // Fail-safe: never let metrics crash the whole admin page
+      return {
+        totalUsers: users.length,
+        activeSubscriptions: 0,
+        totalPagesUsed: 0,
+        monthlyRecurringRevenue: 0,
+        planCounts: {} as Record<string, number>,
+      };
+    }
   }, [users]);
 
   const planEntries = Object.entries(metrics.planCounts);
@@ -197,7 +214,7 @@ function AdminPage(): React.JSX.Element {
         </header>
 
         <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-          {/* USER MANAGEMENT TAB: metrics + chart + users list (your existing layout) */}
+          {/* USER MANAGEMENT TAB: metrics + users list */}
           {activeTab === 'users' && (
             <>
               {/* Key Metrics */}
@@ -257,14 +274,17 @@ function AdminPage(): React.JSX.Element {
                         key={plan}
                         className="flex items-center justify-between text-sm"
                       >
-                        <span className="text-gray-700">{plan}</span>
+                        <span className="text-gray-700">
+                          {plan}
+                        </span>
                         <div className="flex-1 mx-4 h-2 rounded-full bg-gray-100">
                           <div
                             className="h-2 rounded-full bg-blue-500"
                             style={{
                               width: `${
                                 metrics.totalUsers > 0
-                                  ? (count / metrics.totalUsers) * 100
+                                  ? (count / metrics.totalUsers) *
+                                    100
                                   : 0
                               }%`,
                             }}
@@ -279,7 +299,7 @@ function AdminPage(): React.JSX.Element {
                 )}
               </section>
 
-              {/* All Users table (your existing table) */}
+              {/* All Users table */}
               <section>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   All Users
@@ -307,14 +327,21 @@ function AdminPage(): React.JSX.Element {
                     </thead>
                     <tbody className="divide-y divide-gray-200 text-sm">
                       {users.map((u) => (
-                        <tr key={u.id} className="hover:bg-gray-50">
-                          <td className="py-4 px-6">{u.email}</td>
+                        <tr
+                          key={u.id}
+                          className="hover:bg-gray-50"
+                        >
                           <td className="py-4 px-6">
-                            {u.subscription_plan}
+                            {u.email}
                           </td>
-                          <td className="py-4 px-6">{u.usage}</td>
                           <td className="py-4 px-6">
-                            {u.plan_renews}
+                            {u.subscription_plan || 'Unknown'}
+                          </td>
+                          <td className="py-4 px-6">
+                            {u.usage || '0 / ?'}
+                          </td>
+                          <td className="py-4 px-6">
+                            {u.plan_renews || 'N/A'}
                           </td>
                           <td className="py-4 px-6">
                             <button className="text-blue-600 hover:text-blue-800">
@@ -337,17 +364,19 @@ function AdminPage(): React.JSX.Element {
                   </table>
                 </div>
               </section>
+
+              {/* Local user-management demo panel, optional */}
+              <UserManagement />
             </>
           )}
-
-          {/* USER MANAGEMENT TAB */}
-          {activeTab === 'users' && <UserManagement />}
 
           {/* BLOG MANAGEMENT TAB */}
           {activeTab === 'blog' && <BlogManagement />}
 
           {/* EMAIL AUTOMATIONS TAB */}
-          {activeTab === 'automations' && <EmailAutomations />}
+          {activeTab === 'automations' && (
+            <EmailAutomations />
+          )}
 
           {/* EMAIL ROUTING TAB */}
           {activeTab === 'routing' && <EmailRouting />}
