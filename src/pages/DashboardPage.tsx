@@ -18,8 +18,15 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, role } = useAuth();
   const navigate = useNavigate();
+
+  // NEW: if admin somehow hits /dashboard, send them to /admin
+  useEffect(() => {
+    if (isAuthenticated && role === 'admin') {
+      navigate('/admin', { replace: true });
+    }
+  }, [isAuthenticated, role, navigate]);
 
   const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 

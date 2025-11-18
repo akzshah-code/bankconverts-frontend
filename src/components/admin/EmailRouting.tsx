@@ -1,0 +1,226 @@
+// src/components/admin/EmailRouting.tsx
+
+import React, { useState } from 'react';
+import ToggleSwitch from '../ToggleSwitch';
+
+interface EmailRoute {
+  id: string;
+  address: string;
+  action: string;
+  destination: string;
+  active: boolean;
+}
+
+// Local demo routes; later you can replace with real backend data
+const initialRoutes: EmailRoute[] = [
+  {
+    id: 'route_1',
+    address: 'alerts@bankconverts.com',
+    action: 'Forward',
+    destination: 'support@bankconverts.com',
+    active: true,
+  },
+  {
+    id: 'route_2',
+    address: 'billing@bankconverts.com',
+    action: 'Forward',
+    destination: 'accounts@bankconverts.com',
+    active: true,
+  },
+];
+
+const EmailRouting: React.FC = () => {
+  const [routes, setRoutes] = useState<EmailRoute[]>(initialRoutes);
+  const [catchAllActive, setCatchAllActive] = useState(true);
+
+  const handleToggle = (routeId: string, newStatus: boolean) => {
+    setRoutes((prevRoutes) =>
+      prevRoutes.map((route) =>
+        route.id === routeId ? { ...route, active: newStatus } : route,
+      ),
+    );
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Catch-All Rule */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-bold text-brand-dark mb-4">
+          Catch-All Rule
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm whitespace-nowrap">
+            <thead className="border-b font-medium bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3">
+                  Custom address
+                </th>
+                <th scope="col" className="px-6 py-3">
+                  Action
+                </th>
+                <th scope="col" className="px-6 py-3">
+                  Status
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-right"
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b hover:bg-gray-50 transition-colors">
+                <td className="px-6 py-4 font-semibold">
+                  Catch-All
+                </td>
+                <td className="px-6 py-4">Drop</td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center space-x-2">
+                    <ToggleSwitch
+                      checked={catchAllActive}
+                      onChange={setCatchAllActive}
+                      ariaLabel="Toggle Catch-All rule"
+                    />
+                    <span
+                      className={
+                        catchAllActive
+                          ? 'text-green-700'
+                          : 'text-gray-500'
+                      }
+                    >
+                      {catchAllActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <button className="font-medium text-brand-blue hover:text-brand-blue/80">
+                    Edit
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Custom Addresses */}
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-brand-dark">
+            Custom addresses
+          </h2>
+          <p className="text-brand-gray text-sm mt-1">
+            Create custom email addresses and set the action to
+            take on received emails.
+          </p>
+        </div>
+
+        {/* Filters and Actions */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+          <div className="w-full md:w-auto flex-grow">
+            <input
+              type="search"
+              placeholder="Search"
+              className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-blue focus:border-brand-blue transition-colors"
+            />
+          </div>
+          <div className="w-full md:w-auto flex flex-col md:flex-row gap-4">
+            <select className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-blue focus:border-brand-blue">
+              <option>All domains</option>
+            </select>
+            <select className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-blue focus:border-brand-blue">
+              <option>All actions</option>
+            </select>
+            <button className="w-full md:w-auto bg-brand-blue text-white px-4 py-2 rounded-md font-semibold hover:bg-brand-blue-hover transition-colors duration-200">
+              Create address
+            </button>
+          </div>
+        </div>
+
+        {/* Routes Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm whitespace-nowrap">
+            <thead className="border-b font-medium bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3">
+                  Custom address
+                </th>
+                <th scope="col" className="px-6 py-3">
+                  Action
+                </th>
+                <th scope="col" className="px-6 py-3">
+                  Destination
+                </th>
+                <th scope="col" className="px-6 py-3">
+                  Status
+                </th>
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-right"
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {routes.map((route) => (
+                <tr
+                  key={route.id}
+                  className="border-b hover:bg-gray-50 transition-colors"
+                >
+                  <td className="px-6 py-4 font-semibold">
+                    {route.address}
+                  </td>
+                  <td className="px-6 py-4">
+                    {route.action}
+                  </td>
+                  <td className="px-6 py-4">
+                    {route.destination}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center space-x-2">
+                      <ToggleSwitch
+                        checked={route.active}
+                        onChange={(newStatus) =>
+                          handleToggle(route.id, newStatus)
+                        }
+                        ariaLabel={`Toggle status for ${route.address}`}
+                      />
+                      <span
+                        className={
+                          route.active
+                            ? 'text-green-700'
+                            : 'text-gray-500'
+                        }
+                      >
+                        {route.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button className="font-medium text-brand-blue hover:text-brand-blue/80">
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {routes.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-6 py-4 text-center text-gray-500"
+                  >
+                    No custom routes yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EmailRouting;

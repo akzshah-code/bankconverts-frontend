@@ -80,8 +80,8 @@ const Header: React.FC = () => {
   const isActive = (to: string) => location.pathname === to;
 
   const guestLinks: NavLink[] = [
-    { to: '/', label: 'Convert' },
-    { to: '/pricing', label: 'Pricing' },
+  { to: '/app', label: 'Convert' },
+  { to: '/pricing', label: 'Pricing' },
   ];
 
   const userLinks: NavLink[] = [

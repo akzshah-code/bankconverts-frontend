@@ -5,6 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api/api';
 import PageLayout from '../components/PageLayout';
 
+// Admin feature components
+import UserManagement from '../components/admin/UserManagement';
+import BlogManagement from '../components/admin/BlogManagement';
+import EmailAutomations from '../components/admin/EmailAutomations';
+import EmailRouting from '../components/admin/EmailRouting';
+
 interface User {
   id: number;
   email: string;
@@ -13,10 +19,13 @@ interface User {
   plan_renews: string;
 }
 
+type AdminTab = 'users' | 'blog' | 'automations' | 'routing';
+
 function AdminPage(): React.JSX.Element {
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<AdminTab>('users');
 
   const navigate = useNavigate();
   const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
@@ -95,6 +104,16 @@ function AdminPage(): React.JSX.Element {
     };
   }, [users]);
 
+  const planEntries = Object.entries(metrics.planCounts);
+
+  const tabClass = (tab: AdminTab) =>
+    [
+      'px-3 py-2 text-sm font-medium border-b-2',
+      activeTab === tab
+        ? 'border-blue-600 text-blue-600'
+        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+    ].join(' ');
+
   if (loading) {
     return (
       <PageLayout>
@@ -126,159 +145,212 @@ function AdminPage(): React.JSX.Element {
     );
   }
 
-  const planEntries = Object.entries(metrics.planCounts);
-
   return (
     <PageLayout>
       <div className="min-h-screen bg-gray-50">
-        {/* Header (no Logout button here) */}
+        {/* Header */}
         <header className="bg-white shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Admin Dashboard
-              </h1>
-              <p className="text-sm text-gray-500">
-                Application overview and user management.
-              </p>
+          <div className="max-w-6xl mx-auto px-4 py-4">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Admin Dashboard
+            </h1>
+            <p className="text-sm text-gray-500">
+              Application overview and user management.
+            </p>
+          </div>
+
+          {/* Admin menu tabs */}
+          <div className="border-t border-gray-200">
+            <div className="max-w-6xl mx-auto px-4">
+              <nav className="flex space-x-6">
+                <button
+                  type="button"
+                  className={tabClass('users')}
+                  onClick={() => setActiveTab('users')}
+                >
+                  User Management
+                </button>
+                <button
+                  type="button"
+                  className={tabClass('blog')}
+                  onClick={() => setActiveTab('blog')}
+                >
+                  Blog Management
+                </button>
+                <button
+                  type="button"
+                  className={tabClass('automations')}
+                  onClick={() => setActiveTab('automations')}
+                >
+                  Email Automations
+                </button>
+                <button
+                  type="button"
+                  className={tabClass('routing')}
+                  onClick={() => setActiveTab('routing')}
+                >
+                  Email Routing
+                </button>
+              </nav>
             </div>
           </div>
         </header>
 
         <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-          {/* Key Metrics */}
-          <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Key Metrics
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <p className="text-xs font-medium text-gray-500">
-                  Total Users
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-gray-900">
-                  {metrics.totalUsers}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <p className="text-xs font-medium text-gray-500">
-                  Active Subscriptions
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-gray-900">
-                  {metrics.activeSubscriptions}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <p className="text-xs font-medium text-gray-500">
-                  Total Revenue (MRR)
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-gray-900">
-                  ₹{metrics.monthlyRecurringRevenue}
-                </p>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                <p className="text-xs font-medium text-gray-500">
-                  Total Pages Used
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-gray-900">
-                  {metrics.totalPagesUsed}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* Plan distribution */}
-          <section className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              User Analytics by Plan
-            </h2>
-            {planEntries.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No users found yet.
-              </p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {planEntries.map(([plan, count]) => (
-                  <div
-                    key={plan}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span className="text-gray-700">{plan}</span>
-                    <div className="flex-1 mx-4 h-2 rounded-full bg-gray-100">
-                      <div
-                        className="h-2 rounded-full bg-blue-500"
-                        style={{
-                          width: `${
-                            metrics.totalUsers > 0
-                              ? (count / metrics.totalUsers) * 100
-                              : 0
-                          }%`,
-                        }}
-                      />
-                    </div>
-                    <span className="text-gray-700 font-medium">
-                      {count}
-                    </span>
+          {/* USER MANAGEMENT TAB: metrics + chart + users list (your existing layout) */}
+          {activeTab === 'users' && (
+            <>
+              {/* Key Metrics */}
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Key Metrics
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-xl shadow-sm p-4">
+                    <p className="text-xs font-medium text-gray-500">
+                      Total Users
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-gray-900">
+                      {metrics.totalUsers}
+                    </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
+                  <div className="bg-white rounded-xl shadow-sm p-4">
+                    <p className="text-xs font-medium text-gray-500">
+                      Active Subscriptions
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-gray-900">
+                      {metrics.activeSubscriptions}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm p-4">
+                    <p className="text-xs font-medium text-gray-500">
+                      Total Revenue (MRR)
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-gray-900">
+                      ₹{metrics.monthlyRecurringRevenue}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm p-4">
+                    <p className="text-xs font-medium text-gray-500">
+                      Total Pages Used
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-gray-900">
+                      {metrics.totalPagesUsed}
+                    </p>
+                  </div>
+                </div>
+              </section>
 
-          {/* All Users table */}
-          <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              All Users
-            </h2>
-            <div className="bg-white shadow-sm rounded-xl overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Subscription Plan
-                    </th>
-                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Usage
-                    </th>
-                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Plan Renews
-                    </th>
-                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 text-sm">
-                  {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50">
-                      <td className="py-4 px-6">{u.email}</td>
-                      <td className="py-4 px-6">{u.subscription_plan}</td>
-                      <td className="py-4 px-6">{u.usage}</td>
-                      <td className="py-4 px-6">{u.plan_renews}</td>
-                      <td className="py-4 px-6">
-                        <button className="text-blue-600 hover:text-blue-800">
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {users.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="py-4 px-6 text-center text-gray-500"
+              {/* Plan distribution */}
+              <section className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                  User Analytics by Plan
+                </h2>
+                {planEntries.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    No users found yet.
+                  </p>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {planEntries.map(([plan, count]) => (
+                      <div
+                        key={plan}
+                        className="flex items-center justify-between text-sm"
                       >
-                        No users found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                        <span className="text-gray-700">{plan}</span>
+                        <div className="flex-1 mx-4 h-2 rounded-full bg-gray-100">
+                          <div
+                            className="h-2 rounded-full bg-blue-500"
+                            style={{
+                              width: `${
+                                metrics.totalUsers > 0
+                                  ? (count / metrics.totalUsers) * 100
+                                  : 0
+                              }%`,
+                            }}
+                          />
+                        </div>
+                        <span className="text-gray-700 font-medium">
+                          {count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {/* All Users table (your existing table) */}
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  All Users
+                </h2>
+                <div className="bg-white shadow-sm rounded-xl overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          User
+                        </th>
+                        <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Subscription Plan
+                        </th>
+                        <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Usage
+                        </th>
+                        <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Plan Renews
+                        </th>
+                        <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 text-sm">
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover:bg-gray-50">
+                          <td className="py-4 px-6">{u.email}</td>
+                          <td className="py-4 px-6">
+                            {u.subscription_plan}
+                          </td>
+                          <td className="py-4 px-6">{u.usage}</td>
+                          <td className="py-4 px-6">
+                            {u.plan_renews}
+                          </td>
+                          <td className="py-4 px-6">
+                            <button className="text-blue-600 hover:text-blue-800">
+                              Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {users.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="py-4 px-6 text-center text-gray-500"
+                          >
+                            No users found.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          )}
+
+          {/* USER MANAGEMENT TAB */}
+          {activeTab === 'users' && <UserManagement />}
+
+          {/* BLOG MANAGEMENT TAB */}
+          {activeTab === 'blog' && <BlogManagement />}
+
+          {/* EMAIL AUTOMATIONS TAB */}
+          {activeTab === 'automations' && <EmailAutomations />}
+
+          {/* EMAIL ROUTING TAB */}
+          {activeTab === 'routing' && <EmailRouting />}
         </main>
       </div>
     </PageLayout>
@@ -286,4 +358,3 @@ function AdminPage(): React.JSX.Element {
 }
 
 export default AdminPage;
-          

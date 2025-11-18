@@ -13,7 +13,7 @@ const Hero = () => {
       </p>
       <div className="mt-8">
         <a 
-          href="/convert" 
+          href="/app" 
           className="text-lg font-semibold text-white bg-blue-600 px-6 py-3 rounded-lg shadow-lg hover:bg-blue-700 transform hover:scale-105 transition-all md:text-xl md:px-8 md:py-4"
         >
           Convert Your First Statement Free
