@@ -117,17 +117,35 @@ function FileUploader(): React.JSX.Element {
       }
 
       try {
-        const extractResponse = await fetch(
-          `${apiUrl}/extract`,
-          {
-            method: 'POST',
-            body: formData,
-          },
-        );
+        const extractResponse = await fetch(`${apiUrl}/extract`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        // Safely handle non‑JSON responses (e.g. HTML error pages or redirects)
+        const contentType =
+          extractResponse.headers.get('content-type') || '';
+
+        if (!contentType.includes('application/json')) {
+          const text = await extractResponse.text();
+
+          // Common case: backend returns an HTML error page ("<!doctype html>")
+          if (text && text.trim().toLowerCase().startsWith('<!doctype')) {
+            throw new Error(
+              'The server returned an HTML error page instead of JSON. Please confirm the API URL and that you are allowed to access /extract.',
+            );
+          }
+
+          throw new Error(
+            text || 'Unexpected non‑JSON response from the server while extracting data.',
+          );
+        }
+
         const data = await extractResponse.json();
+
         if (!extractResponse.ok) {
           throw new Error(
-            (data && data.error) ||
+            (data && (data.error || data.detail)) ||
               'Failed to extract data.',
           );
         }
@@ -185,8 +203,7 @@ function FileUploader(): React.JSX.Element {
         [JSON.stringify(editedData, null, 2)],
         { type: 'application/json' },
       );
-      const downloadUrl =
-        window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
       a.download = 'transactions.json';
@@ -201,28 +218,28 @@ function FileUploader(): React.JSX.Element {
     setError('');
 
     try {
-      const convertResponse = await fetch(
-        `${apiUrl}/convert`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            format,
-            data: editedData,
-          }),
+      const convertResponse = await fetch(`${apiUrl}/convert`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify({
+          format,
+          data: editedData,
+        }),
+      });
 
       if (!convertResponse.ok) {
-        throw new Error('Failed to convert data.');
+        // Try to surface any text error from the server
+        const text = await convertResponse.text();
+        throw new Error(
+          text || 'Failed to convert data.',
+        );
       }
 
       const blob = await convertResponse.blob();
       const ext = format === 'csv' ? 'csv' : 'xlsx';
-      const downloadUrl =
-        window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
       a.download = `transactions.${ext}`;
