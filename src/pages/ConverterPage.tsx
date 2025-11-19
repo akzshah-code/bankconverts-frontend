@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { UploadCloud, File as FileIcon, X, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,15 +14,15 @@ const ConverterPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const { isAuthenticated, role, isLoading: authLoading, refreshStatus } = useAuth();
-  const navigate = useNavigate();
+  const { isAuthenticated, isLoading: authLoading, refreshStatus } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
+  const apiUrl =
+    import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
-  // Try to hydrate session if there is a cookie (guest hitting /app after logging in elsewhere)
+  // Try to hydrate session if there is a cookie (guest hitting /convert after logging in elsewhere)
   useEffect(() => {
     const checkAuthStatus = async () => {
-      if (isAuthenticated) return;
+      if (isAuthenticated || authLoading) return;
       try {
         const r = await apiFetch(`${apiUrl}/api/status`, {}, 'optional');
         if (r.ok) {
@@ -34,20 +33,16 @@ const ConverterPage: React.FC = () => {
       }
     };
     checkAuthStatus();
-  }, [isAuthenticated, refreshStatus, apiUrl]);
-
-  // If user is authenticated, immediately send them to dashboard/admin instead of showing converter
-  useEffect(() => {
-    if (authLoading) return;
-    if (isAuthenticated) {
-      const target = role === 'admin' ? '/admin' : '/dashboard';
-      navigate(target, { replace: true });
-    }
-  }, [authLoading, isAuthenticated, role, navigate]);
+  }, [isAuthenticated, authLoading, refreshStatus, apiUrl]);
 
   const handleFileSelect = (selectedFile: File | null) => {
     if (selectedFile) {
-      const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      const allowed = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+      ];
       if (allowed.includes(selectedFile.type)) {
         setFile(selectedFile);
         setError('');
@@ -85,7 +80,11 @@ const ConverterPage: React.FC = () => {
   };
 
   const getIdFromExtract = (data: any): string | number | undefined =>
-    data?.file_id ?? data?.id ?? data?.result_id ?? data?.fileId ?? data?.upload_id;
+    data?.file_id ??
+    data?.id ??
+    data?.result_id ??
+    data?.fileId ??
+    data?.upload_id;
 
   const getSignedFromDownload = (data: any): string | undefined =>
     data?.signed_url ?? data?.signedUrl;
@@ -100,7 +99,11 @@ const ConverterPage: React.FC = () => {
 
     while (attempt < maxAttempts) {
       try {
-        const resp = await apiFetch(`${apiUrl}/api/download/${id}`, {}, 'optional');
+        const resp = await apiFetch(
+          `${apiUrl}/api/download/${id}`,
+          {},
+          'optional',
+        );
         const data = await resp.json().catch(() => ({}));
         const url = getSignedFromDownload(data);
         if (resp.ok && url) return url;
@@ -111,7 +114,9 @@ const ConverterPage: React.FC = () => {
       await new Promise((res) => setTimeout(res, delay));
       delay = Math.min(10000, Math.floor(delay * 1.6));
     }
-    throw new Error('Could not generate download link. Please try again in a moment.');
+    throw new Error(
+      'Could not generate download link. Please try again in a moment.',
+    );
   };
 
   const fetchSignedFromDownloadUrl = async (downloadUrl: string) => {
@@ -151,24 +156,32 @@ const ConverterPage: React.FC = () => {
       const extractResp = await apiFetch(
         `${apiUrl}/api/extract`,
         { method: 'POST', body: formData },
-        'optional'
+        'optional',
       );
 
       const extractData = await extractResp.json().catch(() => ({}));
-      if (!extractResp.ok) throw new Error(extractData?.error || 'Conversion failed.');
+      if (!extractResp.ok) {
+        throw new Error(extractData?.error || 'Conversion failed.');
+      }
 
-      const directDownload = extractData?.downloadUrl ?? extractData?.download_url;
+      const directDownload =
+        extractData?.downloadUrl ?? extractData?.download_url;
       const id = getIdFromExtract(extractData);
 
       if (!directDownload && !id) {
-        throw new Error('No file identifier returned from server. Please try again.');
+        throw new Error(
+          'No file identifier returned from server. Please try again.',
+        );
       }
 
       setMessage('Conversion successful! Preparing download...');
 
       let signedUrl: string;
-      if (directDownload) signedUrl = await fetchSignedFromDownloadUrl(directDownload);
-      else signedUrl = await pollDownloadById(id!);
+      if (directDownload) {
+        signedUrl = await fetchSignedFromDownloadUrl(directDownload);
+      } else {
+        signedUrl = await pollDownloadById(id!);
+      }
 
       window.location.href = signedUrl;
       handleReset();
@@ -179,6 +192,7 @@ const ConverterPage: React.FC = () => {
     }
   }, [file, password, apiUrl]);
 
+  // Layout (header/footer) comes from PageLayout via App.tsx
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
@@ -186,7 +200,8 @@ const ConverterPage: React.FC = () => {
           Convert Your Bank Statement
         </h1>
         <p className="text-center text-gray-500">
-          AI-powered, fast, and secure. Upload a PDF or image to get a clean Excel file.
+          AI-powered, fast, and secure. Upload a PDF or image to get a clean
+          Excel file.
         </p>
 
         <div className="relative">
@@ -209,15 +224,20 @@ const ConverterPage: React.FC = () => {
                   }`}
                 />
                 <p className="mb-2 text-sm text-gray-500">
-                  <span className="font-semibold">Click to upload</span> or drag and drop
+                  <span className="font-semibold">Click to upload</span> or drag
+                  and drop
                 </p>
-                <p className="text-xs text-gray-500">PDF, PNG, JPG (MAX. 10MB)</p>
+                <p className="text-xs text-gray-500">
+                  PDF, PNG, JPG (MAX. 10MB)
+                </p>
               </div>
               <input
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
-                onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+                onChange={(e) =>
+                  handleFileSelect(e.target.files?.[0] || null)
+                }
                 accept=".pdf,.png,.jpg,.jpeg"
               />
             </div>
@@ -259,7 +279,11 @@ const ConverterPage: React.FC = () => {
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
               </button>
             </div>
 
@@ -281,8 +305,12 @@ const ConverterPage: React.FC = () => {
           </div>
         )}
 
-        {message && <p className="text-center text-green-600 mt-4">{message}</p>}
-        {error && <p className="text-center text-red-600 mt-4">{error}</p>}
+        {message && (
+          <p className="text-center text-green-600 mt-4">{message}</p>
+        )}
+        {error && (
+          <p className="text-center text-red-600 mt-4">{error}</p>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 // src/pages/LandingPage.tsx
 
 import Seo from '../components/Seo';
-import PageLayout from '../components/PageLayout';
 import Hero from '../components/Hero';
 import UserTiers from '../components/UserTiers';
 import BanksAndPricing from '../components/BanksAndPricing';
@@ -20,19 +19,18 @@ const LandingPage = () => {
         canonicalUrl="https://www.bankconverts.com"
       />
 
-      <PageLayout>
-        <div className="bg-white text-gray-800">
-          <Hero />
-          <main>
-            <UserTiers />
-            <BanksAndPricing />
-            <HowItWorks />
-            <Features />
-            <TargetAudience />
-            <Faq />
-          </main>
-        </div>
-      </PageLayout>
+      {/* Layout (header/footer) now comes from App.tsx via PageLayout */}
+      <div className="bg-white text-gray-800">
+        <Hero />
+        <main>
+          <UserTiers />
+          <BanksAndPricing />
+          <HowItWorks />
+          <Features />
+          <TargetAudience />
+          <Faq />
+        </main>
+      </div>
     </>
   );
 };
