@@ -54,7 +54,8 @@ const Header: React.FC = () => {
   const [backendStatus, setBackendStatus] =
     useState<BackendStatus>('checking');
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
+  const apiUrl =
+    import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
   // Simple backend connectivity check
   useEffect(() => {
@@ -79,24 +80,27 @@ const Header: React.FC = () => {
 
   const isActive = (to: string) => location.pathname === to;
 
+  // Guests: public nav
   const guestLinks: NavLink[] = [
-  { to: '/app', label: 'Convert' },
-  { to: '/pricing', label: 'Pricing' },
+    { to: '/convert', label: 'Convert' },
+    { to: '/pricing', label: 'Pricing' },
   ];
 
+  // Logged‑in users
   const userLinks: NavLink[] = [
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/pricing', label: 'Pricing' },
     { to: '/blog', label: 'Blog' },
-    { to: '/app', label: 'Convert' },
+    { to: '/convert', label: 'Convert' },
     { to: '/bulk-convert', label: 'Bulk Convert' },
   ];
 
+  // Admins
   const adminLinks: NavLink[] = [
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/pricing', label: 'Pricing' },
     { to: '/blog', label: 'Blog' },
-    { to: '/app', label: 'Convert' },
+    { to: '/convert', label: 'Convert' },
     { to: '/bulk-convert', label: 'Bulk Convert' },
     { to: '/admin', label: 'Admin', isHighlighted: true },
   ];
