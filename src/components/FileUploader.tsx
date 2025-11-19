@@ -86,7 +86,7 @@ function FileUploader(): React.JSX.Element {
   };
 
   /**
-   * Sequentially upload each selected file to /extract,
+   * Sequentially upload each selected file to /api/extract,
    * merge all returned transactions into a single combined array,
    * and update batch statistics.
    */
@@ -117,7 +117,7 @@ function FileUploader(): React.JSX.Element {
       }
 
       try {
-        const extractResponse = await fetch(`${apiUrl}/extract`, {
+        const extractResponse = await fetch(`${apiUrl}/api/extract`, {
           method: 'POST',
           body: formData,
         });
@@ -132,12 +132,13 @@ function FileUploader(): React.JSX.Element {
           // Common case: backend returns an HTML error page ("<!doctype html>")
           if (text && text.trim().toLowerCase().startsWith('<!doctype')) {
             throw new Error(
-              'The server returned an HTML error page instead of JSON. Please confirm the API URL and that you are allowed to access /extract.',
+              'The server returned an HTML error page instead of JSON. Please confirm the API URL and that you are allowed to access /api/extract.',
             );
           }
 
           throw new Error(
-            text || 'Unexpected non‑JSON response from the server while extracting data.',
+            text ||
+              'Unexpected non‑JSON response from the server while extracting data.',
           );
         }
 
@@ -230,11 +231,8 @@ function FileUploader(): React.JSX.Element {
       });
 
       if (!convertResponse.ok) {
-        // Try to surface any text error from the server
         const text = await convertResponse.text();
-        throw new Error(
-          text || 'Failed to convert data.',
-        );
+        throw new Error(text || 'Failed to convert data.');
       }
 
       const blob = await convertResponse.blob();
