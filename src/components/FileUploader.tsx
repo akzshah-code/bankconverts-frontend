@@ -29,7 +29,7 @@ function FileUploader(): React.JSX.Element {
   const [filesProcessed, setFilesProcessed] = useState<number>(0);
   const [successfulFiles, setSuccessfulFiles] = useState<number>(0);
   const [totalTransactions, setTotalTransactions] = useState<number>(0);
-  const [pagesUsed] = useState<number>(0); // backend can wire this later
+  const [pagesUsed, setPagesUsed] = useState<number>(0);
 
   const apiUrl =
     import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
@@ -41,6 +41,7 @@ function FileUploader(): React.JSX.Element {
     setFilesProcessed(0);
     setSuccessfulFiles(0);
     setTotalTransactions(0);
+    setPagesUsed(0);
   };
 
   const handleFileChange = (
@@ -106,6 +107,7 @@ function FileUploader(): React.JSX.Element {
     const updatedStatuses = [...fileStatuses];
     let successful = 0;
     let transactionsCount = 0;
+    let pagesTotal = 0;
     let firstError: string | null = null;
 
     for (let i = 0; i < files.length; i += 1) {
@@ -129,7 +131,6 @@ function FileUploader(): React.JSX.Element {
         if (!contentType.includes('application/json')) {
           const text = await extractResponse.text();
 
-          // Common case: backend returns an HTML error page ("<!doctype html>")
           if (text && text.trim().toLowerCase().startsWith('<!doctype')) {
             throw new Error(
               'The server returned an HTML error page instead of JSON. Please confirm the API URL and that you are allowed to access /api/extract.',
@@ -142,7 +143,7 @@ function FileUploader(): React.JSX.Element {
           );
         }
 
-        const data = await extractResponse.json();
+        const data: any = await extractResponse.json();
 
         if (!extractResponse.ok) {
           throw new Error(
@@ -151,9 +152,36 @@ function FileUploader(): React.JSX.Element {
           );
         }
 
+        // Normalise possible response shapes:
+        // - Array: [ {...}, {...} ]
+        // - Object with transactions: { transactions: [...] }
+        // - Object with data: { data: [...] }
+        let fileTransactions: Transaction[] = [];
+
         if (Array.isArray(data)) {
-          allData.push(...data);
-          transactionsCount += data.length;
+          fileTransactions = data;
+        } else if (Array.isArray(data.transactions)) {
+          fileTransactions = data.transactions;
+        } else if (Array.isArray(data.data)) {
+          fileTransactions = data.data;
+        }
+
+        if (fileTransactions.length > 0) {
+          allData.push(...fileTransactions);
+          transactionsCount += fileTransactions.length;
+        }
+
+        // Try to pick up any page‑count field from the response
+        const rawPages =
+          data.pages_used ??
+          data.pagesUsed ??
+          data.page_count ??
+          data.pageCount ??
+          data.pages ??
+          0;
+
+        if (typeof rawPages === 'number' && !Number.isNaN(rawPages)) {
+          pagesTotal += rawPages;
         }
 
         successful += 1;
@@ -180,6 +208,7 @@ function FileUploader(): React.JSX.Element {
     setFilesProcessed(files.length);
     setSuccessfulFiles(successful);
     setTotalTransactions(transactionsCount);
+    setPagesUsed(pagesTotal);
 
     if (firstError) {
       setError(firstError);
@@ -188,7 +217,7 @@ function FileUploader(): React.JSX.Element {
     setBatchComplete(true);
     setIsProcessing(false);
 
-    // For advanced users we still allow tabular preview/editing
+    // Enable preview/download when we have at least one transaction
     if (allData.length > 0) {
       setShowPreview(true);
     }
@@ -276,6 +305,7 @@ function FileUploader(): React.JSX.Element {
     setFilesProcessed(0);
     setSuccessfulFiles(0);
     setTotalTransactions(0);
+    setPagesUsed(0);
   };
 
   const hasData = combinedData.length > 0;
