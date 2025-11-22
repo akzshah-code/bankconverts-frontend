@@ -1,9 +1,25 @@
 // src/pages/ConverterPage.tsx
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { UploadCloud, File as FileIcon, X, Eye, EyeOff } from 'lucide-react';
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
+import {
+  UploadCloud,
+  File as FileIcon,
+  X,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { apiFetch } from '../api/api';
 import { useAuth } from '../context/AuthContext';
+import DataPreviewTable from '../components/DataPreviewTable';
+
+interface Transaction {
+  [key: string]: any;
+}
 
 const ConverterPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -14,7 +30,18 @@ const ConverterPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const { isAuthenticated, isLoading: authLoading, refreshStatus } = useAuth();
+  // Parsed data + stats (similar to bulk flow)
+  const [transactionsData, setTransactionsData] = useState<
+    Transaction[]
+  >([]);
+  const [pagesUsed, setPagesUsed] = useState<number>(0);
+  const [showPreview, setShowPreview] = useState<boolean>(false);
+
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    refreshStatus,
+  } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const apiUrl =
     import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
@@ -24,7 +51,11 @@ const ConverterPage: React.FC = () => {
     const checkAuthStatus = async () => {
       if (isAuthenticated || authLoading) return;
       try {
-        const r = await apiFetch(`${apiUrl}/api/status`, {}, 'optional');
+        const r = await apiFetch(
+          `${apiUrl}/api/status`,
+          {},
+          'optional',
+        );
         if (r.ok) {
           await refreshStatus();
         }
@@ -46,6 +77,11 @@ const ConverterPage: React.FC = () => {
       if (allowed.includes(selectedFile.type)) {
         setFile(selectedFile);
         setError('');
+        // Clear any previous result when a new file is chosen
+        setTransactionsData([]);
+        setPagesUsed(0);
+        setShowPreview(false);
+        setMessage('');
       } else {
         setError('Invalid file type. Please upload a PDF, JPG, or PNG.');
       }
@@ -76,69 +112,10 @@ const ConverterPage: React.FC = () => {
     setPassword('');
     setMessage('');
     setError('');
+    setTransactionsData([]);
+    setPagesUsed(0);
+    setShowPreview(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const getIdFromExtract = (data: any): string | number | undefined =>
-    data?.file_id ??
-    data?.id ??
-    data?.result_id ??
-    data?.fileId ??
-    data?.upload_id;
-
-  const getSignedFromDownload = (data: any): string | undefined =>
-    data?.signed_url ?? data?.signedUrl;
-
-  const normalizeUrl = (u: string) =>
-    u.startsWith('http') ? u : `${apiUrl}${u.startsWith('/') ? '' : '/'}${u}`;
-
-  const pollDownloadById = async (id: string | number) => {
-    const maxAttempts = 12;
-    let attempt = 0;
-    let delay = 1500;
-
-    while (attempt < maxAttempts) {
-      try {
-        const resp = await apiFetch(
-          `${apiUrl}/api/download/${id}`,
-          {},
-          'optional',
-        );
-        const data = await resp.json().catch(() => ({}));
-        const url = getSignedFromDownload(data);
-        if (resp.ok && url) return url;
-      } catch {
-        // ignore and retry
-      }
-      attempt += 1;
-      await new Promise((res) => setTimeout(res, delay));
-      delay = Math.min(10000, Math.floor(delay * 1.6));
-    }
-    throw new Error(
-      'Could not generate download link. Please try again in a moment.',
-    );
-  };
-
-  const fetchSignedFromDownloadUrl = async (downloadUrl: string) => {
-    const target = normalizeUrl(downloadUrl);
-    const maxAttempts = 8;
-    let attempt = 0;
-    let delay = 1200;
-
-    while (attempt < maxAttempts) {
-      try {
-        const resp = await apiFetch(target, {}, 'optional');
-        const data = await resp.json().catch(() => ({}));
-        const url = getSignedFromDownload(data);
-        if (resp.ok && url) return url;
-      } catch {
-        // ignore and retry
-      }
-      attempt += 1;
-      await new Promise((res) => setTimeout(res, delay));
-      delay = Math.min(8000, Math.floor(delay * 1.6));
-    }
-    throw new Error('Download link not ready yet. Please retry.');
   };
 
   const handleConvert = useCallback(async () => {
@@ -147,6 +124,9 @@ const ConverterPage: React.FC = () => {
     setIsLoading(true);
     setError('');
     setMessage('');
+    setTransactionsData([]);
+    setPagesUsed(0);
+    setShowPreview(false);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -159,32 +139,49 @@ const ConverterPage: React.FC = () => {
         'optional',
       );
 
-      const extractData = await extractResp.json().catch(() => ({}));
+      const data: any = await extractResp.json().catch(() => ({}));
       if (!extractResp.ok) {
-        throw new Error(extractData?.error || 'Conversion failed.');
-      }
-
-      const directDownload =
-        extractData?.downloadUrl ?? extractData?.download_url;
-      const id = getIdFromExtract(extractData);
-
-      if (!directDownload && !id) {
         throw new Error(
-          'No file identifier returned from server. Please try again.',
+          data?.error || 'Conversion failed. Please try again.',
         );
       }
 
-      setMessage('Conversion successful! Preparing download...');
+      // Normalise returned structure from /api/extract:
+      // { transactions: [...], pages_used: N, ... }
+      let tx: Transaction[] = [];
 
-      let signedUrl: string;
-      if (directDownload) {
-        signedUrl = await fetchSignedFromDownloadUrl(directDownload);
-      } else {
-        signedUrl = await pollDownloadById(id!);
+      if (Array.isArray(data)) {
+        tx = data;
+      } else if (Array.isArray(data.transactions)) {
+        tx = data.transactions;
+      } else if (Array.isArray(data.data)) {
+        tx = data.data;
       }
 
-      window.location.href = signedUrl;
-      handleReset();
+      if (!tx || tx.length === 0) {
+        throw new Error(
+          'No readable transaction data was found in the document.',
+        );
+      }
+
+      const rawPages =
+        data.pages_used ??
+        data.pagesUsed ??
+        data.page_count ??
+        data.pageCount ??
+        data.pages ??
+        0;
+
+      setTransactionsData(tx);
+      setPagesUsed(
+        typeof rawPages === 'number' && !Number.isNaN(rawPages)
+          ? rawPages
+          : 0,
+      );
+      setMessage(
+        'Conversion successful! Review your data below and download in your preferred format.',
+      );
+      setShowPreview(true);
     } catch (err: any) {
       setError(err?.message || 'Something went wrong.');
     } finally {
@@ -192,7 +189,84 @@ const ConverterPage: React.FC = () => {
     }
   }, [file, password, apiUrl]);
 
-  // Layout (header/footer) comes from PageLayout via App.tsx
+  // Local-only export for Excel / CSV / JSON (same approach as bulk)
+  const handleDownload = (
+    data: Transaction[],
+    format: 'xlsx' | 'csv' | 'json',
+  ) => {
+    if (!data || data.length === 0) {
+      setError('There is no data to download yet.');
+      return;
+    }
+
+    try {
+      if (format === 'json') {
+        const blob = new Blob(
+          [JSON.stringify(data, null, 2)],
+          { type: 'application/json' },
+        );
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = 'transactions.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+        return;
+      }
+
+      const headers = Object.keys(data[0] || {});
+      const csvRows: string[] = [];
+
+      csvRows.push(headers.join(','));
+
+      for (const row of data) {
+        const values = headers.map((key) => {
+          const raw = row[key];
+          if (raw === null || raw === undefined) return '';
+          const str = String(raw);
+          if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        });
+        csvRows.push(values.join(','));
+      }
+
+      const csvContent = csvRows.join('\n');
+
+      const mimeType =
+        format === 'csv'
+          ? 'text/csv;charset=utf-8;'
+          : 'application/vnd.ms-excel';
+      const blob = new Blob([csvContent], { type: mimeType });
+
+      const ext = format === 'csv' ? 'csv' : 'xlsx';
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `transactions.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'An unknown error occurred while preparing the download.',
+      );
+    }
+  };
+
+  const handleCancelPreview = () => {
+    setShowPreview(false);
+    // Keep transactionsData so user can re-open by converting again if needed
+  };
+
+  const hasData = transactionsData.length > 0;
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="w-full max-w-2xl p-6 md:p-8 space-y-6 bg-white rounded-2xl shadow-xl">
@@ -201,9 +275,10 @@ const ConverterPage: React.FC = () => {
         </h1>
         <p className="text-center text-gray-500">
           AI-powered, fast, and secure. Upload a PDF or image to get a clean
-          Excel file.
+          Excel/CSV/JSON file.
         </p>
 
+        {/* Upload area */}
         <div className="relative">
           {!file ? (
             <div
@@ -263,6 +338,7 @@ const ConverterPage: React.FC = () => {
           )}
         </div>
 
+        {/* Password + actions */}
         {file && (
           <div className="space-y-4 pt-4">
             <div className="relative">
@@ -299,17 +375,101 @@ const ConverterPage: React.FC = () => {
                 disabled={isLoading}
                 className="w-2/3 px-4 py-2 font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
               >
-                {isLoading ? 'Converting...' : 'Convert to Excel'}
+                {isLoading ? 'Converting...' : 'Extract & Preview'}
               </button>
             </div>
           </div>
         )}
 
+        {/* Messages */}
         {message && (
-          <p className="text-center text-green-600 mt-4">{message}</p>
+          <p className="text-center text-green-600 mt-2">{message}</p>
         )}
         {error && (
-          <p className="text-center text-red-600 mt-4">{error}</p>
+          <p className="text-center text-red-600 mt-2">{error}</p>
+        )}
+
+        {/* Stats + download options + preview (only after successful extract) */}
+        {showPreview && hasData && (
+          <div className="mt-8 space-y-6">
+            {/* Simple stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-xs font-medium text-gray-500">
+                  Transactions
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-gray-900">
+                  {transactionsData.length}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-xs font-medium text-gray-500">
+                  Pages Used
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-gray-900">
+                  {pagesUsed}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <p className="text-xs font-medium text-gray-500">
+                  File
+                </p>
+                <p className="mt-2 text-sm font-semibold text-gray-900 truncate">
+                  {file?.name}
+                </p>
+              </div>
+            </div>
+
+            {/* Download buttons */}
+            <div className="text-center">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                Download Your Data
+              </h3>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  type="button"
+                  disabled={!hasData}
+                  onClick={() =>
+                    handleDownload(transactionsData, 'xlsx')
+                  }
+                  className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 disabled:bg-blue-300"
+                >
+                  Excel (.xlsx)
+                </button>
+                <button
+                  type="button"
+                  disabled={!hasData}
+                  onClick={() =>
+                    handleDownload(transactionsData, 'csv')
+                  }
+                  className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 disabled:bg-blue-300"
+                >
+                  CSV (.csv)
+                </button>
+                <button
+                  type="button"
+                  disabled={!hasData}
+                  onClick={() =>
+                    handleDownload(transactionsData, 'json')
+                  }
+                  className="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 disabled:bg-blue-300"
+                >
+                  JSON (.json)
+                </button>
+              </div>
+            </div>
+
+            {/* Review and Edit table */}
+            <div className="mt-6">
+              <DataPreviewTable
+                initialData={transactionsData}
+                onConvert={(edited) =>
+                  handleDownload(edited, 'xlsx')
+                }
+                onCancel={handleCancelPreview}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
