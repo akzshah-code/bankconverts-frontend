@@ -21,7 +21,7 @@ interface Transaction {
   [key: string]: any;
 }
 
-const CSV_SEPARATOR = ',';
+const CSV_SEPARATOR = ';';
 const BASE_HEADERS = [
   'Date',
   'Narration',
@@ -230,7 +230,11 @@ const ConverterPage: React.FC = () => {
       const headers = [...orderedHeaders, ...extraHeaders];
 
       const csvRows: string[] = [];
+
+      // Excel hint so it uses comma as separator
       csvRows.push(`sep=${CSV_SEPARATOR}`);
+
+      // Header row
       csvRows.push(headers.join(CSV_SEPARATOR));
 
       for (const row of data) {
