@@ -21,7 +21,7 @@ interface Transaction {
   [key: string]: any;
 }
 
-const CSV_SEPARATOR = ';';
+const CSV_SEPARATOR = ',';
 const BASE_HEADERS = [
   'Date',
   'Narration',
@@ -68,7 +68,7 @@ const ConverterPage: React.FC = () => {
           await refreshStatus();
         }
       } catch {
-        // guest is allowed
+        // guest allowed
       }
     };
     checkAuthStatus();
@@ -230,6 +230,7 @@ const ConverterPage: React.FC = () => {
       const headers = [...orderedHeaders, ...extraHeaders];
 
       const csvRows: string[] = [];
+      csvRows.push(`sep=${CSV_SEPARATOR}`);
       csvRows.push(headers.join(CSV_SEPARATOR));
 
       for (const row of data) {
