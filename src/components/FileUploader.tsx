@@ -14,6 +14,17 @@ interface FileStatus {
 }
 
 const MAX_BATCH_BYTES = 20 * 1024 * 1024; // 20 MB
+const CSV_SEPARATOR = ';';
+
+// Preferred column order for exports
+const BASE_HEADERS = [
+  'Date',
+  'Narration',
+  'Cheque/Reference#',
+  'Debit',
+  'Credit',
+  'Balance',
+];
 
 function FileUploader(): React.JSX.Element {
   const [files, setFiles] = useState<File[]>([]);
@@ -124,7 +135,6 @@ function FileUploader(): React.JSX.Element {
           body: formData,
         });
 
-        // Safely handle non‑JSON responses (e.g. HTML error pages or redirects)
         const contentType =
           extractResponse.headers.get('content-type') || '';
 
@@ -152,10 +162,6 @@ function FileUploader(): React.JSX.Element {
           );
         }
 
-        // Normalise possible response shapes:
-        // - Array: [ {...}, {...} ]
-        // - Object with transactions: { transactions: [...] }
-        // - Object with data: { data: [...] }
         let fileTransactions: Transaction[] = [];
 
         if (Array.isArray(data)) {
@@ -171,7 +177,6 @@ function FileUploader(): React.JSX.Element {
           transactionsCount += fileTransactions.length;
         }
 
-        // Try to pick up any page‑count field from the response
         const rawPages =
           data.pages_used ??
           data.pagesUsed ??
@@ -217,7 +222,6 @@ function FileUploader(): React.JSX.Element {
     setBatchComplete(true);
     setIsProcessing(false);
 
-    // Enable preview/download when we have at least one transaction
     if (allData.length > 0) {
       setShowPreview(true);
     }
@@ -239,7 +243,6 @@ function FileUploader(): React.JSX.Element {
     setError('');
 
     try {
-      // JSON: keep behaviour as-is (local file, no backend).
       if (format === 'json') {
         const blob = new Blob(
           [JSON.stringify(editedData, null, 2)],
@@ -256,13 +259,20 @@ function FileUploader(): React.JSX.Element {
         return;
       }
 
-      // For CSV / Excel, build a simple CSV string in the browser.
-      // This avoids any /convert backend endpoint and removes the NetworkError.
-      const headers = Object.keys(editedData[0] || {});
+      // Build header list in consistent order
+      const firstRow = editedData[0] || {};
+      const orderedHeaders = BASE_HEADERS.filter(
+        (h) => h in firstRow,
+      );
+      const extraHeaders = Object.keys(firstRow).filter(
+        (h) => !orderedHeaders.includes(h),
+      );
+      const headers = [...orderedHeaders, ...extraHeaders];
+
       const csvRows: string[] = [];
 
       // Header row
-      csvRows.push(headers.join(','));
+      csvRows.push(headers.join(CSV_SEPARATOR));
 
       // Data rows
       for (const row of editedData) {
@@ -270,22 +280,24 @@ function FileUploader(): React.JSX.Element {
           const raw = row[key];
           if (raw === null || raw === undefined) return '';
           const str = String(raw);
-          // Escape quotes and commas for CSV
-          if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+          if (
+            str.includes('"') ||
+            str.includes(CSV_SEPARATOR) ||
+            str.includes('\n')
+          ) {
             return `"${str.replace(/"/g, '""')}"`;
           }
           return str;
         });
-        csvRows.push(values.join(','));
+        csvRows.push(values.join(CSV_SEPARATOR));
       }
 
       const csvContent = csvRows.join('\n');
 
-      // If user chooses CSV, use text/csv.
-      // If user chooses XLSX, still serve as CSV but with .xlsx extension
-      // so it opens in Excel (quick win until a real XLSX generator is added).
       const mimeType =
-        format === 'csv' ? 'text/csv;charset=utf-8;' : 'application/vnd.ms-excel';
+        format === 'csv'
+          ? 'text/csv;charset=utf-8;'
+          : 'application/vnd.ms-excel';
       const blob = new Blob([csvContent], { type: mimeType });
 
       const ext = format === 'csv' ? 'csv' : 'xlsx';
@@ -297,8 +309,6 @@ function FileUploader(): React.JSX.Element {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(downloadUrl);
-
-      // Keep data/preview so user can download again or choose another format
     } catch (err) {
       setError(
         err instanceof Error

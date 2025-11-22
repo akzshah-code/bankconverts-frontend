@@ -21,6 +21,16 @@ interface Transaction {
   [key: string]: any;
 }
 
+const CSV_SEPARATOR = ';';
+const BASE_HEADERS = [
+  'Date',
+  'Narration',
+  'Cheque/Reference#',
+  'Debit',
+  'Credit',
+  'Balance',
+];
+
 const ConverterPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState('');
@@ -30,7 +40,6 @@ const ConverterPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Parsed data + stats (similar to bulk flow)
   const [transactionsData, setTransactionsData] = useState<
     Transaction[]
   >([]);
@@ -46,7 +55,6 @@ const ConverterPage: React.FC = () => {
   const apiUrl =
     import.meta.env.VITE_API_URL || 'https://api.bankconverts.com';
 
-  // Try to hydrate session if there is a cookie (guest hitting /convert after logging in elsewhere)
   useEffect(() => {
     const checkAuthStatus = async () => {
       if (isAuthenticated || authLoading) return;
@@ -60,7 +68,7 @@ const ConverterPage: React.FC = () => {
           await refreshStatus();
         }
       } catch {
-        // guest is allowed, so ignore errors
+        // guest is allowed
       }
     };
     checkAuthStatus();
@@ -77,7 +85,6 @@ const ConverterPage: React.FC = () => {
       if (allowed.includes(selectedFile.type)) {
         setFile(selectedFile);
         setError('');
-        // Clear any previous result when a new file is chosen
         setTransactionsData([]);
         setPagesUsed(0);
         setShowPreview(false);
@@ -146,8 +153,6 @@ const ConverterPage: React.FC = () => {
         );
       }
 
-      // Normalise returned structure from /api/extract:
-      // { transactions: [...], pages_used: N, ... }
       let tx: Transaction[] = [];
 
       if (Array.isArray(data)) {
@@ -189,7 +194,6 @@ const ConverterPage: React.FC = () => {
     }
   }, [file, password, apiUrl]);
 
-  // Local-only export for Excel / CSV / JSON (same approach as bulk)
   const handleDownload = (
     data: Transaction[],
     format: 'xlsx' | 'csv' | 'json',
@@ -216,22 +220,33 @@ const ConverterPage: React.FC = () => {
         return;
       }
 
-      const headers = Object.keys(data[0] || {});
-      const csvRows: string[] = [];
+      const firstRow = data[0] || {};
+      const orderedHeaders = BASE_HEADERS.filter(
+        (h) => h in firstRow,
+      );
+      const extraHeaders = Object.keys(firstRow).filter(
+        (h) => !orderedHeaders.includes(h),
+      );
+      const headers = [...orderedHeaders, ...extraHeaders];
 
-      csvRows.push(headers.join(','));
+      const csvRows: string[] = [];
+      csvRows.push(headers.join(CSV_SEPARATOR));
 
       for (const row of data) {
         const values = headers.map((key) => {
           const raw = row[key];
           if (raw === null || raw === undefined) return '';
           const str = String(raw);
-          if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+          if (
+            str.includes('"') ||
+            str.includes(CSV_SEPARATOR) ||
+            str.includes('\n')
+          ) {
             return `"${str.replace(/"/g, '""')}"`;
           }
           return str;
         });
-        csvRows.push(values.join(','));
+        csvRows.push(values.join(CSV_SEPARATOR));
       }
 
       const csvContent = csvRows.join('\n');
@@ -262,7 +277,6 @@ const ConverterPage: React.FC = () => {
 
   const handleCancelPreview = () => {
     setShowPreview(false);
-    // Keep transactionsData so user can re-open by converting again if needed
   };
 
   const hasData = transactionsData.length > 0;
@@ -389,10 +403,9 @@ const ConverterPage: React.FC = () => {
           <p className="text-center text-red-600 mt-2">{error}</p>
         )}
 
-        {/* Stats + download options + preview (only after successful extract) */}
+        {/* Stats + download options + preview */}
         {showPreview && hasData && (
           <div className="mt-8 space-y-6">
-            {/* Simple stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gray-50 rounded-lg p-4 text-center">
                 <p className="text-xs font-medium text-gray-500">
