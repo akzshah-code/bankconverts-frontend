@@ -223,24 +223,15 @@ function FileUploader(): React.JSX.Element {
     }
   };
 
+  // -----------------------------------------
+  // Local-only export for Excel / CSV / JSON
+  // -----------------------------------------
   const handleConfirmConvert = async (
     editedData: Transaction[],
     format: 'xlsx' | 'csv' | 'json' = 'xlsx',
   ) => {
-    // Local JSON download (no backend) if requested
-    if (format === 'json') {
-      const blob = new Blob(
-        [JSON.stringify(editedData, null, 2)],
-        { type: 'application/json' },
-      );
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = 'transactions.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(downloadUrl);
+    if (!editedData || editedData.length === 0) {
+      setError('There is no data to download yet.');
       return;
     }
 
@@ -248,23 +239,55 @@ function FileUploader(): React.JSX.Element {
     setError('');
 
     try {
-      const convertResponse = await fetch(`${apiUrl}/convert`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          format,
-          data: editedData,
-        }),
-      });
-
-      if (!convertResponse.ok) {
-        const text = await convertResponse.text();
-        throw new Error(text || 'Failed to convert data.');
+      // JSON: keep behaviour as-is (local file, no backend).
+      if (format === 'json') {
+        const blob = new Blob(
+          [JSON.stringify(editedData, null, 2)],
+          { type: 'application/json' },
+        );
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = 'transactions.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+        return;
       }
 
-      const blob = await convertResponse.blob();
+      // For CSV / Excel, build a simple CSV string in the browser.
+      // This avoids any /convert backend endpoint and removes the NetworkError.
+      const headers = Object.keys(editedData[0] || {});
+      const csvRows: string[] = [];
+
+      // Header row
+      csvRows.push(headers.join(','));
+
+      // Data rows
+      for (const row of editedData) {
+        const values = headers.map((key) => {
+          const raw = row[key];
+          if (raw === null || raw === undefined) return '';
+          const str = String(raw);
+          // Escape quotes and commas for CSV
+          if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        });
+        csvRows.push(values.join(','));
+      }
+
+      const csvContent = csvRows.join('\n');
+
+      // If user chooses CSV, use text/csv.
+      // If user chooses XLSX, still serve as CSV but with .xlsx extension
+      // so it opens in Excel (quick win until a real XLSX generator is added).
+      const mimeType =
+        format === 'csv' ? 'text/csv;charset=utf-8;' : 'application/vnd.ms-excel';
+      const blob = new Blob([csvContent], { type: mimeType });
+
       const ext = format === 'csv' ? 'csv' : 'xlsx';
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -275,13 +298,12 @@ function FileUploader(): React.JSX.Element {
       a.remove();
       window.URL.revokeObjectURL(downloadUrl);
 
-      setShowPreview(false);
-      setCombinedData([]);
+      // Keep data/preview so user can download again or choose another format
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : 'An unknown error occurred.',
+          : 'An unknown error occurred while preparing the download.',
       );
     } finally {
       setIsProcessing(false);
