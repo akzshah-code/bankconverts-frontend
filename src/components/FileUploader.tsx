@@ -14,7 +14,7 @@ interface FileStatus {
 }
 
 const MAX_BATCH_BYTES = 20 * 1024 * 1024; // 20 MB
-const CSV_SEPARATOR = ';'; // Excel will use this when we add "sep=," header
+const CSV_SEPARATOR = ','; // Excel will use this when we add "sep=," header
 
 // Preferred column order for exports
 const BASE_HEADERS = [
@@ -271,7 +271,8 @@ function FileUploader(): React.JSX.Element {
       const csvRows: string[] = [];
 
       // Excel hint so it uses comma as separator
-      csvRows.push(`sep=${CSV_SEPARATOR}`);
+      csvRows.push('sep=,');
+      // csvRows.push(`sep=${CSV_SEPARATOR}`);
 
       // Header row
       csvRows.push(headers.join(CSV_SEPARATOR));
