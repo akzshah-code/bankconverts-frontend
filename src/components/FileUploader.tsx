@@ -272,7 +272,6 @@ function FileUploader(): React.JSX.Element {
 
       // Excel hint so it uses comma as separator
       csvRows.push('sep=,');
-      // csvRows.push(`sep=${CSV_SEPARATOR}`);
 
       // Header row
       csvRows.push(headers.join(CSV_SEPARATOR));
