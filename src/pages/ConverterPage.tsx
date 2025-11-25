@@ -45,6 +45,9 @@ const ConverterPage: React.FC = () => {
   >([]);
   const [pagesUsed, setPagesUsed] = useState<number>(0);
   const [showPreview, setShowPreview] = useState<boolean>(false);
+  const [serverDownloadPath, setServerDownloadPath] = useState<string | null>(
+    null,
+  ); // /api/download/<id>
 
   const {
     isAuthenticated,
@@ -89,6 +92,7 @@ const ConverterPage: React.FC = () => {
         setPagesUsed(0);
         setShowPreview(false);
         setMessage('');
+        setServerDownloadPath(null);
       } else {
         setError('Invalid file type. Please upload a PDF, JPG, or PNG.');
       }
@@ -122,6 +126,7 @@ const ConverterPage: React.FC = () => {
     setTransactionsData([]);
     setPagesUsed(0);
     setShowPreview(false);
+    setServerDownloadPath(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -134,6 +139,7 @@ const ConverterPage: React.FC = () => {
     setTransactionsData([]);
     setPagesUsed(0);
     setShowPreview(false);
+    setServerDownloadPath(null);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -183,6 +189,14 @@ const ConverterPage: React.FC = () => {
           ? rawPages
           : 0,
       );
+
+      // store backend Excel download path (e.g. "/api/download/75")
+      if (typeof data.download_url === 'string') {
+        setServerDownloadPath(data.download_url);
+      } else {
+        setServerDownloadPath(null);
+      }
+
       setMessage(
         'Conversion successful! Review your data below and download in your preferred format.',
       );
@@ -203,6 +217,30 @@ const ConverterPage: React.FC = () => {
       return;
     }
 
+    // Excel: use backend-generated .xlsx via /api/download/<id>
+    if (format === 'xlsx') {
+      if (!serverDownloadPath) {
+        setError('Excel file is not available. Please run Extract & Preview again.');
+        return;
+      }
+
+      apiFetch(`${apiUrl}${serverDownloadPath}`, {}, 'optional')
+        .then((resp) => resp.json())
+        .then((json: any) => {
+          const signed = json?.signed_url;
+          if (typeof signed === 'string') {
+            // trigger browser download of real .xlsx
+            window.location.href = signed;
+          } else {
+            setError('Could not get Excel download link from server.');
+          }
+        })
+        .catch(() => {
+          setError('Could not get Excel download link from server.');
+        });
+      return;
+    }
+
     try {
       if (format === 'json') {
         const blob = new Blob(
@@ -220,6 +258,7 @@ const ConverterPage: React.FC = () => {
         return;
       }
 
+      // CSV export (client-side)
       const firstRow = data[0] || {};
       const orderedHeaders = BASE_HEADERS.filter(
         (h) => h in firstRow,
@@ -256,13 +295,10 @@ const ConverterPage: React.FC = () => {
 
       const csvContent = csvRows.join('\n');
 
-      const mimeType =
-        format === 'csv'
-          ? 'text/csv;charset=utf-8;'
-          : 'application/vnd.ms-excel';
+      const mimeType = 'text/csv;charset=utf-8;'; // always real CSV
       const blob = new Blob([csvContent], { type: mimeType });
 
-      const ext = format === 'csv' ? 'csv' : 'xlsx';
+      const ext = 'csv';
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
@@ -392,7 +428,7 @@ const ConverterPage: React.FC = () => {
               <button
                 onClick={handleConvert}
                 disabled={isLoading}
-                className="w-2/3 px-4 py-2 font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                className="w-2/3 px-4 py-2 font-bold text白 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
               >
                 {isLoading ? 'Converting...' : 'Extract & Preview'}
               </button>

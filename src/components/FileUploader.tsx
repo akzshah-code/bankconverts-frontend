@@ -296,13 +296,11 @@ function FileUploader(): React.JSX.Element {
 
       const csvContent = csvRows.join('\n');
 
-      const mimeType =
-        format === 'csv'
-          ? 'text/csv;charset=utf-8;'
-          : 'application/vnd.ms-excel';
+      // Always create a real CSV file so Excel splits into columns
+      const mimeType = 'text/csv;charset=utf-8;';
       const blob = new Blob([csvContent], { type: mimeType });
 
-      const ext = format === 'csv' ? 'csv' : 'xlsx';
+      const ext = 'csv';
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
